@@ -11,6 +11,7 @@
 
 ## 1. 데이터 수집방법
 | OIE WAHIS 소개 영상
+
 [![OIE WAHIS]( https://img.youtube.com/vi/kWV64ke6A18/0.jpg)](https://www.youtube.com/embed/kWV64ke6A18) 
 
 1. WAHIS사이트 분석
