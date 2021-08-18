@@ -2,7 +2,6 @@
 
 | 분석을 위한 OIE WAHIS(World Animal Health Information System)의 주간 발생정보 수집 
 
-<img width="70%" src = 'https://user-images.githubusercontent.com/53881929/128859176-0c891484-50bb-477f-941f-5c0649b05aac.gif'/>
 
 ---
 ## 0. 목적
@@ -11,6 +10,7 @@
 ---
 
 ## 1. 데이터 수집방법
+<iframe width="893" height="502" src="https://www.youtube.com/embed/kWV64ke6A18" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
 1. WAHIS사이트 분석
 2. 주간발생정보의 데이터 중 분석이 필요한 자료를 선정
   - 발생국가, 발생일, 발생지역, 보고일, 발생건수, 발생 질병명 등
