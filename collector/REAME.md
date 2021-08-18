@@ -22,7 +22,7 @@
   - 발생국가, 발생일, 발생지역, 보고일, 발생건수, 발생 질병명 등
   - ![image](https://user-images.githubusercontent.com/53881929/129833993-a6231648-dac6-4e80-8473-9ce2548b5789.png)
   - ![image](https://user-images.githubusercontent.com/53881929/129834030-8c726c61-aa31-445f-a2f1-1bea48d493e0.png)
-  - 
+ 
 
   - susceptible/cases/deaths/killed and Disposed of/slaughtered/killed for commercial use/vaccinated중 하나라도 숫자가 있는 경우에만 발생건으로 간주
   - 군집 발생의 경우 'Number of outbreaks'에 숫자가 있는 경우에 해당 건수를 반영하고, 그렇지 않은 경우에는 1건으로 파악
