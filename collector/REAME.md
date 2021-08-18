@@ -20,6 +20,7 @@
 
 2. 주간발생정보의 데이터 중 분석이 필요한 자료를 선정
   - 발생국가, 발생일, 발생지역, 보고일, 발생건수, 발생 질병명 등
+
 ![image](https://user-images.githubusercontent.com/53881929/129833993-a6231648-dac6-4e80-8473-9ce2548b5789.png)
 ![image](https://user-images.githubusercontent.com/53881929/129834030-8c726c61-aa31-445f-a2f1-1bea48d493e0.png)
  
