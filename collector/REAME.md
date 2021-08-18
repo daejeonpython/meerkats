@@ -10,15 +10,16 @@
 ---
 
 ## 1. 데이터 수집방법
-<iframe width="893" height="502" src="https://www.youtube.com/embed/kWV64ke6A18" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-
+| OIE WAHIS 소개 영상
 [![OIE WAHIS]( https://img.youtube.com/vi/kWV64ke6A18/0.jpg)](https://www.youtube.com/embed/kWV64ke6A18) 
+
 1. WAHIS사이트 분석
-2. 주간발생정보의 데이터 중 분석이 필요한 자료를 선정
   - 발생국가, 발생일, 발생지역, 보고일, 발생건수, 발생 질병명 등
-3. 수생동물질병 및 신규 발생정보 없는 데이터 제거
-4. Dataframe으로 database에 저장
-5. 영문을 한글로 번역
+3. 주간발생정보의 데이터 중 분석이 필요한 자료를 선정
+  - 발생국가, 발생일, 발생지역, 보고일, 발생건수, 발생 질병명 등
+4. 수생동물질병 및 신규 발생정보 없는 데이터 제거
+5. Dataframe으로 database에 저장
+6. 영문을 한글로 번역
 ---
 ## 2. 사용법
 1. NewtypeOiescraper.py 파일을 실행
