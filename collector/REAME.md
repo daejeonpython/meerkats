@@ -20,15 +20,15 @@
 ![image](https://user-images.githubusercontent.com/53881929/129833411-100c9ae5-8b82-440c-b689-de0e84022d9f.png)
 
 2. 주간발생정보의 데이터 중 분석이 필요한 자료를 선정
-    - 발생국가, 발생일, 발생지역, 보고일, 발생건수, 발생 질병명 등
+  - 발생국가, 발생일, 발생지역, 보고일, 발생건수, 발생 질병명 등
 
 ![image](https://user-images.githubusercontent.com/53881929/129833993-a6231648-dac6-4e80-8473-9ce2548b5789.png)
 ![image](https://user-images.githubusercontent.com/53881929/129834030-8c726c61-aa31-445f-a2f1-1bea48d493e0.png)
  
 
-    - susceptible/cases/deaths/killed and Disposed of/slaughtered/killed for commercial use/vaccinated중 하나라도 숫자가 있는 경우에만 발생건으로 간주
-    - 군집 발생의 경우 'Number of outbreaks'에 숫자가 있는 경우에 해당 건수를 반영하고, 그렇지 않은 경우에는 1건으로 파악
-    - 축종이 여러개이나, 한 건으로 보고된 경우에는 다른 축종은 발생건수를 잡지 않고 NAN으로 둠 (발생건으로 잡으면 발생건수가 데이터와 불일치하는 문제 발생)
+  - susceptible/cases/deaths/killed and Disposed of/slaughtered/killed for commercial use/vaccinated중 하나라도 숫자가 있는 경우에만 발생건으로 간주
+  - 군집 발생의 경우 'Number of outbreaks'에 숫자가 있는 경우에 해당 건수를 반영하고, 그렇지 않은 경우에는 1건으로 파악
+  - 축종이 여러개이나, 한 건으로 보고된 경우에는 다른 축종은 발생건수를 잡지 않고 NAN으로 둠 (발생건으로 잡으면 발생건수가 데이터와 불일치하는 문제 발생)
 
 3. 수생동물질병 및 신규 발생정보 없는 데이터 제거
   - 수생 동물 발생건의 경우 조기 리턴으로 처리 (빈 값)
