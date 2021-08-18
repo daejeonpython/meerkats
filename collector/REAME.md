@@ -16,7 +16,7 @@
 
 1. WAHIS사이트 분석
   - 발생국가, 발생일, 발생지역, 보고일, 발생건수, 발생 질병명 등
-  - ![image](https://user-images.githubusercontent.com/53881929/129833411-100c9ae5-8b82-440c-b689-de0e84022d9f.png)
+![image](https://user-images.githubusercontent.com/53881929/129833411-100c9ae5-8b82-440c-b689-de0e84022d9f.png)
 
 2. 주간발생정보의 데이터 중 분석이 필요한 자료를 선정
   - 발생국가, 발생일, 발생지역, 보고일, 발생건수, 발생 질병명 등
