@@ -1,4 +1,4 @@
-# 이미지 수집기 작성
+# 질병정보 수집기 작성
 
 | 분석을 위한 OIE WAHIS(World Animal Health Information System)의 주간 발생정보 수집 
 
