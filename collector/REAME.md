@@ -19,12 +19,17 @@
 
 ![image](https://user-images.githubusercontent.com/53881929/129833411-100c9ae5-8b82-440c-b689-de0e84022d9f.png)
 
-2. 주간발생정보의 데이터 중 분석이 필요한 자료를 선정
+2. 주간발생보고의 데이터 중 분석이 필요한 자료를 선정
+| 주간 발생보고(Weekly disease information)는 발생 건이 없는 경우에도 (추이 확인을 위해) 최초 발생이후 1주일 단위로 보고를 실시함. 
+| 따라서, 실제로 발생 건이 포함된 보고인지 여부를 확인해야 함
+
     - susceptible/cases/deaths/killed and Disposed of/slaughtered/killed for commercial use/vaccinated중 하나라도 숫자가 있는 경우에만 발생건으로 간주
 
     - 군집 발생의 경우 'Number of outbreaks'에 숫자가 있는 경우에 해당 건수를 반영하고, 그렇지 않은 경우에는 1건으로 파악
 
     - 축종이 여러개이나, 한 건으로 보고된 경우에는 다른 축종은 발생건수를 잡지 않고 NAN으로 둠 (발생건으로 잡으면 발생건수가 데이터와 불일치하는 문제 발생)
+    
+    - 최초(역학관계가 없는 발생건) 또는 추가(역학적 관련성이 있는 발생건) 인지 확인
 
 ![image](https://user-images.githubusercontent.com/53881929/129833993-a6231648-dac6-4e80-8473-9ce2548b5789.png)
 ![image](https://user-images.githubusercontent.com/53881929/129834030-8c726c61-aa31-445f-a2f1-1bea48d493e0.png)
