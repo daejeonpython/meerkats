@@ -3,10 +3,11 @@ import json
 import pymysql
 from elasticsearch.client import Elasticsearch
 from elasticsearch import helpers
-from temp.edit_distance import disease_convert, species_convert
-from temp.kr_dictionary import disease_dict, species_dict
+from utils.edit_distance import disease_convert, species_convert
+from utils.en2kr_dict import disease_dict, species_dict
 
-def read_from_db(host, user, password, table, display_rows=False):
+
+def read_from_mysql(host, user, password, database, table, display_rows=False):
     
     print("Reading data from db...")
     reverse_disease_dict = {value: key for (key, value) in disease_dict.items()}
@@ -19,10 +20,10 @@ def read_from_db(host, user, password, table, display_rows=False):
         db_info = curs.fetchall()
         print(f'# Database information: {db_info}')
 
-        curs.execute("SHOW TABLES FROM " + user)
+        curs.execute("SHOW TABLES FROM " + database)
         table_info = curs.fetchall()
         print(f'# List of tables of {user}: {table_info}')
-        target_table = user + "." + table
+        target_table = database + "." + table
         
         curs.execute("SELECT * FROM " + target_table)
         column_info = curs.description
@@ -30,20 +31,20 @@ def read_from_db(host, user, password, table, display_rows=False):
         for idx, col in enumerate(column_info):
             print(idx, col[0])
 
-        curs.execute("SELECT 발생일, 질병, 혈청형, 축종, 구분, 건수, 국가, `발생 지역`, 위경도 FROM " + target_table)
+        curs.execute("SELECT rowid, 발생일, 질병, 혈청형, 축종, 구분, 건수, 지역, 국가, `발생 지역`, 위경도 FROM " + target_table)
         rows = curs.fetchall()
         # tuple -> list
         rows = [list(x) for x in rows]
 
         for idx, row in enumerate(rows):
-            if row[1] not in reverse_disease_dict:
-                row[1] = disease_convert(row[1])
-            if row[3] not in reverse_species_dict:
-                row[3] = species_convert(row[3])
-            if row[8] != None:
+            if row[2] not in reverse_disease_dict:                
+                row[2] = disease_convert(row[2])
+            if row[4] not in reverse_species_dict:
+                row[4] = species_convert(row[4])
+            if row[10] != None:
                 # ex) string: "[26.3, 27.3]" -> float list: [26.3, 27.3]
-                row[8] = row[8].lstrip("[").rstrip("]").split(",")
-                row[8] = [float(x) for x in row[8]]
+                row[10] = row[10].lstrip("[").rstrip("]").split(",")
+                row[10] = [float(x) for x in row[10]]
             if display_rows:
                 print(idx, row)
             
@@ -65,23 +66,24 @@ def write_to_elastic(host, mapping_definition, index_name, rows):
         es.indices.create(index=index_name, body=mapping)
     
     bulk_actions = []
-    for idx, row in enumerate(rows):
+    for row in rows:
 
         # 위경도 column이 None인 경우, 입력하지 않음
         action = {
                 "_index": index_name,
-                "_id": idx,   # db의 각 row에 대한 고유 ID로 변경 필요
-                "발생일": row[0],
-                "질병": row[1],
-                "혈청형": row[2],
-                "축종": row[3],
-                "구분": row[4],
-                "건수": row[5],
-                "국가": row[6],
-                "발생 지역": row[7],
-                "위경도": row[8]
+                "_id": row[0] - 1,  # current ES index (oie_reports_kr_ver2) _id starts from 0 while mysql db (oie_reports_kr) rowid starts from 1
+                "발생일": row[1],
+                "질병": row[2],
+                "혈청형": row[3],
+                "축종": row[4],
+                "구분": row[5],
+                "건수": row[6],
+                "지역": row[7],
+                "국가": row[8],
+                "발생 지역": row[9],
+                "위경도": row[10]
         }
-        if row[8] == None:
+        if row[10] == None:
             del action["위경도"]
         
         # indexing one document at a time
@@ -92,20 +94,34 @@ def write_to_elastic(host, mapping_definition, index_name, rows):
     helpers.bulk(es, bulk_actions)
 
 
+def write_to_csv(rows, path):
+    
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("발생일\t질병\t혈청형\t축종\t구분\t건수\t지역\t국가\t발생 지역\t위경도\n")
+        for row in rows:
+            for idx, col in enumerate(row):
+                if idx != len(row) - 1:
+                    f.write(f'{col}\t')
+                else:
+                    f.write(f'{col}\n')
+            
 def pipe(opt):
-    rows = read_from_db(opt.db_host, opt.db_user, opt.db_password, opt.db_table, display_rows=False)
+    rows = read_from_mysql(opt.mysql_host, opt.mysql_user, opt.mysql_password, opt.mysql_database, opt.mysql_table, display_rows=False)
     write_to_elastic(opt.es_host, opt.es_mapping, opt.es_index, rows)
+    write_to_csv(rows, opt.csv_path)
 
 
 def parse_opt():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--db_host", type=str, default="127.0.0.1")
-    parser.add_argument("--db_user", type=str)
-    parser.add_argument("--db_password", type=str)
-    parser.add_argument("--db_table", type=str)
-    parser.add_argument("--es_host", type=str, default="localhost:9200")
-    parser.add_argument("--es_mapping", type=str)
-    parser.add_argument("--es_index", type=str)
+    parser.add_argument("--mysql_host", type=str, default="127.0.0.1", help="MySQL host ip")
+    parser.add_argument("--mysql_user", type=str, help="MySQL user name")
+    parser.add_argument("--mysql_password", type=str, help="MySQL password")
+    parser.add_argument("--mysql_database", type=str, help="database name")
+    parser.add_argument("--mysql_table", type=str, help="table name")
+    parser.add_argument("--es_host", type=str, default="localhost:9200", help="elasticsearch host ip")
+    parser.add_argument("--es_mapping", type=str, help="index mappping defintion")
+    parser.add_argument("--es_index", type=str, help="index name")
+    parser.add_argument("--csv_path", type=str, help="path to csv file")
     opt = parser.parse_args()
     return opt
 

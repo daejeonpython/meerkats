@@ -43,6 +43,15 @@
               }
             }
           },
+          "지역": {
+            "type": "text",
+            "fields": {
+              "keyword": {
+                "type": "keyword",
+                "ignore_above": 256
+              }
+            }
+          },
           "질병": {
             "type": "text",
             "fields": {
