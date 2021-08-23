@@ -4,41 +4,44 @@ import numpy as np
 import pandas as pd
 import torch
 import matplotlib.pyplot as plt
-from utils.datasets import create_dataloader
+from utils.datasets import create_dataset
 from models.lstm import LSTMPredictor
 
 
 def predict(opt):
-    seq_len = 10
+    
     split_ratio = 0.2
-    # train_loader, test_loader = create`_dataloader(opt.data, split_ratio, seq_len)
-    df, train_data, test_data, train_dataset, test_dataset = create_dataloader(opt.data, split_ratio, seq_len)
-    model = LSTMPredictor(n_features=1, n_hidden=512, seq_len=seq_len, n_layers=2, device=opt.device)
-    model.load_state_dict(torch.load(opt.weight, map_location=opt.device))
-    model.to(opt.device)
+    seq_len = 10
+    device = opt.device
+
+    # train_loader, test_loader = create_dataloader(opt.data, split_ratio, seq_len)
+    df, scaler, train_data, _, _, _, test_points, test_labels = create_dataset(opt.data, split_ratio, seq_len)
+    test_points = torch.from_numpy(test_points).float().to(device)
+    test_labels = torch.from_numpy(test_labels).float().to(device)
+
+    model = LSTMPredictor(seq_len=seq_len)
+    model.load_state_dict(torch.load(opt.weight, map_location=device))
+    model.to(device)
     model.eval()
 
-    train_points, train_labels = train_dataset[0]
-    test_points, test_labels = test_dataset[0]
 
     with torch.no_grad():
         
         preds = []
         for i in range(len(test_points)):
-            test_seq = test_points[i:i+1]
-            test_seq = torch.from_numpy(test_seq).float()
+                    
+            test_seq = test_points[i:i+1]            
             
-            y_test_pred = model(test_seq.to(opt.device))  # y_test_pred.shape = torch.Size([1, 1])            
+            y_test_pred = model(test_seq)  # y_test_pred.shape = torch.Size([1, 1])            
             pred = torch.flatten(y_test_pred).item()
-            preds.append(pred)
-
-        true_cases = test_dataset.scaler.inverse_transform(np.expand_dims(test_labels.flatten(), axis=0)).flatten()
-        predicted_cases = test_dataset.scaler.inverse_transform(np.expand_dims(preds, axis=0)).flatten()
-        # print(true_cases)
-        # print(predicted_cases)
-
+            preds.append(pred)            
+          
+          
+        true_cases = scaler.inverse_transform(np.expand_dims(test_labels.flatten(), axis=0)).flatten()
+        predicted_cases = scaler.inverse_transform(np.expand_dims(preds, axis=0)).flatten()
+       
         plt.figure(figsize=(12, 8))
-        plt.plot(df.index[:len(train_data)], train_data, label="Historical Daily Cases")
+        plt.plot(df.index[:len(train_data)], scaler.inverse_transform(train_data).flatten(), label="Historical Daily Cases")
         plt.plot(df.index[len(train_data):len(train_data) + len(true_cases)], true_cases, label="Real Daily Cases")
         plt.plot(df.index[len(train_data):len(train_data) + len(true_cases)], predicted_cases, label="Predicted Daily Cases")
         plt.legend()

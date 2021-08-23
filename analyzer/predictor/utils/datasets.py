@@ -6,36 +6,38 @@ from sklearn.preprocessing import MinMaxScaler
 import matplotlib.pyplot as plt
 
 
-def create_dataloader(data_path, split_ratio=0.2, seq_len=10):
+def create_dataset(data_path, split_ratio=0.2, seq_len=10):
 
     df = csv_to_pd(data_path)
     data = np.array(df["outbreaks"])
     test_data_size = int(len(data) * split_ratio)
         
-    print(f'Validation data size: {test_data_size}')
-
     train_data = data[:-test_data_size]
     test_data = data[-test_data_size:]
-    print(len(train_data))
-    print(len(test_data))
+    print(f'train data size: {len(train_data)}')
+    print(f'test data size: {len(test_data)}')
 
-    train_dataset = OIEDataset(train_data, seq_len)
-    test_dataset = OIEDataset(test_data, seq_len)
-
-    # train_loader = DataLoader(train_dataset)
-    # test_loader = DataLoader(test_dataset)
+    scaler = MinMaxScaler()
+    # ehong 210823: Should I fit scaler into total data? or train data first then test data?
+    scaler = scaler.fit(np.expand_dims(train_data, axis=1))  # np.expand_dims(data, axis=1).shape = (data_len, 1)
+    train_data = scaler.transform(np.expand_dims(train_data, axis=1))  # normalize data between 0 and 1
+    test_data = scaler.transform(np.expand_dims(test_data, axis=1))
  
-    # return train_loader, test_loader
-    return df, train_data, test_data, train_dataset, test_dataset
+    train_points, train_labels = create_sequences(train_data, seq_len)
+    test_points, test_labels = create_sequences(test_data, seq_len)
+
+    return df, scaler, train_data, test_data, train_points, train_labels, test_points, test_labels
 
 
+# Leave this for now
+'''
 class OIEDataset(Dataset):
     
     def __init__ (self, data, seq_len):                
                         
         self.scaler = MinMaxScaler()
-        self.scaler = self.scaler.fit(np.expand_dims(data, axis=1))
-        self.data = self.scaler.transform(np.expand_dims(data, axis=1))                
+        self.scaler = self.scaler.fit(np.expand_dims(data, axis=1))  # np.expand_dims(data, axis=1).shape = (data_len, 1)
+        self.data = self.scaler.transform(np.expand_dims(data, axis=1))  # normalize data between 0 and 1
         self.x, self.y = create_sequences(self.data, seq_len)        
 
     def __len__(self):
@@ -44,6 +46,7 @@ class OIEDataset(Dataset):
     def __getitem__(self, index):
         # return self.x[index], self.y[index]
         return self.x, self.y
+'''
 
 
 def csv_to_pd(data_path):
@@ -73,6 +76,9 @@ def create_sequences(data, seq_len):
         xs.append(x)
         ys.append(y)
     
+    # np.array(xs).shape = ((data_len - seq_len - 1), seq_len, 1)  ex) (1341, 10, 1)
+    # np.array(ys).shape = ((data_len - seq_len - 1), 1)  ex) (1341, 1)
+    # For each sequence of "seq_len" data points 
     return np.array(xs), np.array(ys)
 
 
