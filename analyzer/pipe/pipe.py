@@ -55,10 +55,10 @@ def read_from_mysql(host, user, password, database, table, display_rows=False):
         print(ex)
 
 
-def write_to_elastic(host, mapping_definition, index_name, rows):
+def write_to_elastic(host, es_user, es_password, mapping_definition, index_name, rows):
     
     print("Writing extracted data into Elasticsearch...")
-    es = Elasticsearch(host)
+    es = Elasticsearch(hosts=[host], http_auth=(es_user, es_password))
     with open(mapping_definition, "r", encoding="utf-8") as json_file:
         mapping = json.load(json_file)
 
@@ -107,7 +107,7 @@ def write_to_csv(rows, path):
             
 def pipe(opt):
     rows = read_from_mysql(opt.mysql_host, opt.mysql_user, opt.mysql_password, opt.mysql_database, opt.mysql_table, display_rows=False)
-    write_to_elastic(opt.es_host, opt.es_mapping, opt.es_index, rows)
+    write_to_elastic(opt.es_host, opt.es_user, opt.es_password, opt.es_mapping, opt.es_index, rows)
     write_to_csv(rows, opt.csv_path)
 
 
@@ -119,6 +119,8 @@ def parse_opt():
     parser.add_argument("--mysql_database", type=str, help="database name")
     parser.add_argument("--mysql_table", type=str, help="table name")
     parser.add_argument("--es_host", type=str, default="localhost:9200", help="elasticsearch host ip")
+    parser.add_argument("--es_user", type=str, help="elasticsearch user name")
+    parser.add_argument("--es_password", type=str, help="elsticsearch password")
     parser.add_argument("--es_mapping", type=str, help="index mappping defintion")
     parser.add_argument("--es_index", type=str, help="index name")
     parser.add_argument("--csv_path", type=str, help="path to csv file")
