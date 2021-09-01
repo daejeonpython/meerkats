@@ -3,7 +3,7 @@
 <img src="https://capsule-render.vercel.app/api?type=cylinder&color=auto&height=300&section=header&text=meerkats&animation=fadeIn&descSize=20&fontSize=120" />
 
 # 글로벌 동물 감염병 조기 경보 시스템
-> meerkat는 세계 동물질병정보를 수집, 분석하는 서비스를 제공합니다
+> meerkat는 세계 동물질병정보를 수집, 분석하는 서비스를 제공합니다.
 
 
 ## 개발배경
