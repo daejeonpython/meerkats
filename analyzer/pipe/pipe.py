@@ -108,7 +108,7 @@ def write_to_elastic(host, es_user, es_password, mapping_definition, index_name,
     print('ES indexing is done.')
 
 
-def write_to_csv(path, rows, column_names, ):
+def write_to_csv(path, rows, column_names):
     
     with open(path, 'w', encoding='utf-8') as f:
         for idx, col_name in enumerate(column_names):
@@ -130,10 +130,11 @@ def write_to_csv(path, rows, column_names, ):
 def pipe(opt):
     rows, column_names = read_from_mysql(opt.mysql_host, opt.mysql_user, opt.mysql_password, opt.mysql_database, opt.mysql_table)
     write_to_elastic(opt.es_host, opt.es_user, opt.es_password, opt.es_mapping, opt.es_index, rows)
-    write_to_csv(opt.csv_path, rows, column_names, )
+    write_to_csv(opt.csv_path, rows, column_names)
 
 
-def parse_opt():
+if __name__ == '__main__':
+    
     parser = argparse.ArgumentParser()
     parser.add_argument('--mysql_host', type=str, default='127.0.0.1', help='MySQL host ip')
     parser.add_argument('--mysql_user', type=str, help='MySQL user name')
@@ -147,9 +148,5 @@ def parse_opt():
     parser.add_argument('--es_index', type=str, help='index name')
     parser.add_argument('--csv_path', type=str, help='path to csv file')
     opt = parser.parse_args()
-    return opt
 
-
-if __name__ == '__main__':
-    opt = parse_opt()
     pipe(opt)
