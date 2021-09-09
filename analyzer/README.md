@@ -1,6 +1,10 @@
 ## 분석기
 
+&nbsp;
 
+![2021-09-09_094325](https://user-images.githubusercontent.com/13086891/132606866-9122e073-41bf-42b3-9dba-27d46bca361e.png)
+
+&nbsp;
 
 #### I. 주요 기능
 
@@ -8,7 +12,7 @@
 2. DB에서 CRUD(Create, Read, Update, Delete) 연산을 통해 발생하는 변경사항을 ES 인덱스에 반영함으로써 DB와 Elasticsearch 간의 동기화 유지 (개발 예정)
 3. 전처리된 데이터를 입력으로 하여 향후 질병 발생 양상을 에측 (개발 예정)
 
-
+&nbsp;
 
 #### II. 처리 흐름
 
