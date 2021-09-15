@@ -1,36 +1,43 @@
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import numpy as np
 import pandas as pd
-from sklearn.preprocessing import MinMaxScaler, StandardScaler
-import matplotlib.pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
 
 
-def create_dataloader(data_path, batch_size, split_ratio=0.2, seq_len=10):
+def create_dataset(data_path, is_train, scaler, split_ratio=0.2, seq_len=10):
     
-    df = csv_to_pd(data_path)
-    data = np.array(df['outbreaks'])
-    test_data_size = int(len(data) * split_ratio)
-
-    train_data = data[:-test_data_size]
-    test_data = data[-test_data_size:]
-    train_data = torch.from_numpy(train_data).float()
-    test_data = torch.from_numpy(test_data).float()
-    print(f'train data size: {len(train_data)}')
-    print(f'test data size: {len(test_data)}')
+    df = csv_to_pd(data_path)    
+    print(f'df.shape: {df.shape}')
     
-    scaler = MinMaxScaler()
-    scaler = scaler.fit(np.expand_dims(train_data, axis=1))  # np.expand_dims(data, axis=1).shape = (data_len, 1)
-    train_data = scaler.transform(np.expand_dims(train_data, axis=1))  # normalize data between 0 and 1
-    test_data = scaler.transform(np.expand_dims(test_data, axis=1))
-
-    train_dataset = OIEDataset(train_data, seq_len)
-    test_dataset = OIEDataset(test_data, seq_len)
-
-    train_loader = DataLoader(train_dataset, batch_size=batch_size)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size)
+    test_data_size = int(len(df) * split_ratio)
+    outbreaks = np.array(df['outbreaks'])
     
-    return df, scaler, train_loader, test_loader
+    if is_train:
+        outbreaks = outbreaks[:-test_data_size]
+        outbreaks = torch.from_numpy(outbreaks).float() # numpy default float64 -> torch default float32
+        print(f'len(outbreaks): {len(outbreaks)}')
+        scaler = MinMaxScaler()
+        scaler = scaler.fit(np.expand_dims(outbreaks, axis=1))  # np.expand_dims(data, axis=1).shape = (data_len, 1)
+        scaled_outbreaks = scaler.transform(np.expand_dims(outbreaks, axis=1))  # normalize data between 0 and 1    
+        print(f'boundary_check: {boundary_check(scaled_outbreaks)}')
+        
+        dataset = OIEDataset(scaled_outbreaks, seq_len)            
+        return df, dataset, scaler
+        
+    else:
+        outbreaks = outbreaks[-test_data_size:]
+        outbreaks = torch.from_numpy(outbreaks).float()
+        scaled_outbreaks = scaler.transform(np.expand_dims(outbreaks, axis=1))
+        print(f'boundary_check: {boundary_check(scaled_outbreaks)}')
+        
+        dataset = OIEDataset(scaled_outbreaks, seq_len)  
+        return df, dataset
+
+                
+
+def boundary_check(x):    
+    return np.any(x > 1.0), np.any(x < 0), np.any(np.isnan(x))
 
 
 class OIEDataset(Dataset):
@@ -54,7 +61,7 @@ def csv_to_pd(data_path):
     df['date'] = pd.to_datetime(df['date'])    
     # df.drop(df.loc[df['date'] < '2017-01-01'].index, inplace=True)
     df.set_index('date', inplace=True)    
-        
+
     return df
 
 
