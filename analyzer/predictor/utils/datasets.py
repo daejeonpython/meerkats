@@ -1,11 +1,11 @@
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
 
 
-def create_dataset(data_path, is_train, scaler, split_ratio=0.2, seq_len=10):
+def create_dataloader(data_path, is_train, scaler, batch_size, split_ratio=0.2, seq_len=10):
     
     df = csv_to_pd(data_path)    
     print(f'df.shape: {df.shape}')
@@ -23,7 +23,8 @@ def create_dataset(data_path, is_train, scaler, split_ratio=0.2, seq_len=10):
         print(f'boundary_check: {boundary_check(scaled_outbreaks)}')
         
         dataset = OIEDataset(scaled_outbreaks, seq_len)            
-        return df, dataset, scaler
+        dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+        return df, dataloader, scaler
         
     else:
         outbreaks = outbreaks[-test_data_size:]
@@ -32,9 +33,19 @@ def create_dataset(data_path, is_train, scaler, split_ratio=0.2, seq_len=10):
         print(f'boundary_check: {boundary_check(scaled_outbreaks)}')
         
         dataset = OIEDataset(scaled_outbreaks, seq_len)  
-        return df, dataset
+        dataloader = DataLoader(dataset, batch_size=batch_size)
+        return df, dataloader
 
-                
+
+def csv_to_pd(data_path):
+    
+    df = pd.read_csv(data_path, sep='\t')    
+    df['date'] = pd.to_datetime(df['date'])    
+    # df.drop(df.loc[df['date'] < '2017-01-01'].index, inplace=True)
+    df.set_index('date', inplace=True)    
+
+    return df     
+
 
 def boundary_check(x):    
     return np.any(x > 1.0), np.any(x < 0), np.any(np.isnan(x))
@@ -54,16 +65,6 @@ class OIEDataset(Dataset):
     def __getitem__(self, index):
         return self.x[index], self.y[index]
         
-
-def csv_to_pd(data_path):
-    
-    df = pd.read_csv(data_path, sep='\t')    
-    df['date'] = pd.to_datetime(df['date'])    
-    # df.drop(df.loc[df['date'] < '2017-01-01'].index, inplace=True)
-    df.set_index('date', inplace=True)    
-
-    return df
-
 
 def create_sequences(data, seq_len):
     xs = []

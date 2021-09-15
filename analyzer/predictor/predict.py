@@ -4,9 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
-from torch.utils.data import DataLoader
-
-from utils.datasets import create_dataset
+from utils.datasets import create_dataloader
 from models.gru import StackedGRU
 
 
@@ -20,8 +18,7 @@ def predict(opt):
     seq_len = saved_model['seq_len']
     print(f"best epoch: {saved_model['best_epoch']}")
 
-    df, validation_dataset = create_dataset(opt.data, is_train=False, scaler=scaler, split_ratio=opt.split_ratio, seq_len=seq_len)
-    dataloader = DataLoader(validation_dataset, batch_size=opt.batch_size)
+    df, dataloader = create_dataloader(opt.data, is_train=False, scaler=scaler, batch_size=opt.batch_size, split_ratio=opt.split_ratio, seq_len=seq_len)    
     
     
     model = StackedGRU(n_features=df.shape[1])

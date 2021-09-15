@@ -5,9 +5,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import torch
-from torch.utils.data import DataLoader
 
-from utils.datasets import create_dataset
+from utils.datasets import create_dataloader
 from models.gru import StackedGRU
 
 
@@ -17,11 +16,9 @@ def train(opt):
     epochs = opt.epochs
     seq_len = opt.seq_len
 
-    df, train_dataset, scaler = create_dataset(opt.data, is_train=True, scaler=None, split_ratio=opt.split_ratio, seq_len=seq_len)
-    _, validation_dataset = create_dataset(opt.data, is_train=False, scaler=scaler, split_ratio=opt.split_ratio, seq_len=seq_len)
-    
-    train_loader = DataLoader(train_dataset, batch_size=opt.batch_size, shuffle=True)
-    val_loader = DataLoader(validation_dataset, batch_size=opt.batch_size)
+    df, train_loader, scaler = create_dataloader(opt.data, is_train=True, scaler=None, batch_size=opt.batch_size, split_ratio=opt.split_ratio, seq_len=seq_len)
+    _, val_loader = create_dataloader(opt.data, is_train=False, scaler=scaler, batch_size=opt.batch_size, split_ratio=opt.split_ratio, seq_len=seq_len)
+        
 
     model = StackedGRU(n_features=df.shape[1])
     print(model)
@@ -30,6 +27,7 @@ def train(opt):
         
     optimizer = torch.optim.AdamW(model.parameters())    
     loss_fn = torch.nn.MSELoss()
+    # loss_fn = torch.nn.MSELoss(reduction='sum')
     
     best = {'loss': math.inf}
     train_hist = np.zeros(epochs)
