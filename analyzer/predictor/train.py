@@ -18,9 +18,9 @@ def train(opt):
 
     df, train_loader, scaler = create_dataloader(opt.data, is_train=True, scaler=None, batch_size=opt.batch_size, split_ratio=opt.split_ratio, seq_len=seq_len)
     _, val_loader = create_dataloader(opt.data, is_train=False, scaler=scaler, batch_size=opt.batch_size, split_ratio=opt.split_ratio, seq_len=seq_len)
-        
 
-    model = StackedGRU(n_features=df.shape[1])
+
+    model = StackedGRU(n_features=df.shape[-1])
     print(model)
     model.train()
     model.to(device)

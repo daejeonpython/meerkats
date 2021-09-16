@@ -3,6 +3,7 @@ from torch.utils.data import Dataset, DataLoader
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import MinMaxScaler
+from utils.preprocessor import csv_to_pd
 
 
 def create_dataloader(data_path, is_train, scaler, batch_size, split_ratio=0.2, seq_len=10):
@@ -11,40 +12,33 @@ def create_dataloader(data_path, is_train, scaler, batch_size, split_ratio=0.2, 
     print(f'df.shape: {df.shape}')
     
     test_data_size = int(len(df) * split_ratio)
-    outbreaks = np.array(df['outbreaks'])
+    outbreaks = np.array(df[:])
     
     if is_train:
-        outbreaks = outbreaks[:-test_data_size]
-        outbreaks = torch.from_numpy(outbreaks).float() # numpy default float64 -> torch default float32
-        print(f'len(outbreaks): {len(outbreaks)}')
+        outbreaks = outbreaks[:-test_data_size]        
+        outbreaks = outbreaks.reshape(-1)  # reshape 2d matrix to 1d vector for MinMaxScaler().transform
         scaler = MinMaxScaler()
         scaler = scaler.fit(np.expand_dims(outbreaks, axis=1))  # np.expand_dims(data, axis=1).shape = (data_len, 1)
-        scaled_outbreaks = scaler.transform(np.expand_dims(outbreaks, axis=1))  # normalize data between 0 and 1    
+        scaled_outbreaks = scaler.transform(np.expand_dims(outbreaks, axis=1))  # normalize data between 0 and 1            
+        scaled_outbreaks = scaled_outbreaks.reshape(-1, df.shape[-1])  # reshape 1d vector back to 2d matrix        
         print(f'boundary_check: {boundary_check(scaled_outbreaks)}')
+        scaled_outbreaks = torch.from_numpy(scaled_outbreaks).float() # numpy default float64 -> torch default float32
         
         dataset = OIEDataset(scaled_outbreaks, seq_len)            
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         return df, dataloader, scaler
         
     else:
-        outbreaks = outbreaks[-test_data_size:]
-        outbreaks = torch.from_numpy(outbreaks).float()
+        outbreaks = outbreaks[-test_data_size:]        
+        outbreaks = outbreaks.reshape(-1)
         scaled_outbreaks = scaler.transform(np.expand_dims(outbreaks, axis=1))
+        scaled_outbreaks = scaled_outbreaks.reshape(-1, df.shape[-1])       
         print(f'boundary_check: {boundary_check(scaled_outbreaks)}')
+        scaled_outbreaks = torch.from_numpy(scaled_outbreaks).float() # numpy default float64 -> torch default float32
         
         dataset = OIEDataset(scaled_outbreaks, seq_len)  
         dataloader = DataLoader(dataset, batch_size=batch_size)
         return df, dataloader
-
-
-def csv_to_pd(data_path):
-    
-    df = pd.read_csv(data_path, sep='\t')    
-    df['date'] = pd.to_datetime(df['date'])    
-    # df.drop(df.loc[df['date'] < '2017-01-01'].index, inplace=True)
-    df.set_index('date', inplace=True)    
-
-    return df     
 
 
 def boundary_check(x):    
@@ -76,8 +70,8 @@ def create_sequences(data, seq_len):
         xs.append(x)
         ys.append(y)
     
-    # np.array(xs).shape = ((data_len - seq_len - 1), seq_len, 1)  ex) (1341, 10, 1)
-    # np.array(ys).shape = ((data_len - seq_len - 1), 1)  ex) (1341, 1)
+    # np.array(xs).shape = ((data_len - seq_len - 1), seq_len, n_features)  ex) (1341, 10, 4)
+    # np.array(ys).shape = ((data_len - seq_len - 1), n_features)  ex) (1341, 4)
     # For each sequence of 'seq_len' data points 
     return np.array(xs), np.array(ys)
 

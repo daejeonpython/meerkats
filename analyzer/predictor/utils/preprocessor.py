@@ -1,127 +1,88 @@
 import os
 import argparse
-import datetime
-from datetime import timedelta
 import pandas as pd
 import matplotlib.pyplot as plt
 
 
-def get_time_series(start, end):
-    time_series = []
-    delta = end - start
-    for i in range(delta.days + 1):
-        day = start + timedelta(days=i)
-        time_series.append(day)
-    return time_series
-
-
-def read_lines(file_path):
-    list_of_lines = []
-    with open(file_path, 'r', encoding='utf-8') as file:
-        for line in file:
-            if line.endswith('\n'):
-                line = line.rstrip('\n')
-            list_of_lines.append(line)
-    return list_of_lines
-
-
-def preprocess(file_in, file_out):
+def preprocess(file_in, file_out, target_disease):
+        
+    # 1. read raw data and extract desired columns
+    df_raw = pd.read_csv(file_in, sep='\t')    
+    # print(df.shape)    
     
-    # 1. Read the raw file
-    lines = read_lines(file_in)
-    data = dict()
-    for idx, line in enumerate(lines):
-        if idx == 0:
-            continue
-        tokens = line.split('\t')
-        try:
-            data[datetime.datetime.strptime(tokens[8], '%Y-%m-%d').date()].append(dict(disease=tokens[2], serotype=tokens[5], species=tokens[11], country=tokens[4], outbreaks=tokens[7]))            
-        except KeyError:
-            data[datetime.datetime.strptime(tokens[8], '%Y-%m-%d').date()] = [dict(disease=tokens[2], serotype=tokens[5], species=tokens[11], country=tokens[4], outbreaks=tokens[7])]
-                
-    
-    sorted_by_date = sorted(data.items(), key=lambda x: x[0], reverse=False)
-    
-    # Since OIE data suffer from data sparsity before 2017, we start from 2017    
-    first_date = datetime.datetime.strptime('2017-01-01', '%Y-%m-%d').date()
-    # last_date = datetime.datetime.strptime('2021-01-01', '%Y-%m-%d').date()
-    # first_date = sorted_by_date[0][0]
-    last_date = sorted_by_date[-1][0]
-    print(f'First_date: {first_date}')
-    print(f'Last_date: {last_date}')
-    
-    # 2. Get time range between the first date and the last date
-    time_series = get_time_series(first_date, last_date)
+    df_raw = df_raw[['발생일', '질병', '혈청형', '건수', '지역', '국가']]
+    df_raw.rename(columns={'발생일': 'date', '질병': 'disease', '혈청형': 'serotype', '건수': 'outbreaks', '지역': 'region', '국가': 'country'}, inplace=True)
+    df_raw['date'] = pd.to_datetime(df_raw['date'])
+    df_raw.set_index('date', inplace=True)
+    df_raw = df_raw.sort_values(by=['date'])        
+    df_raw = df_raw[df_raw['disease'] == target_disease]
+    print(df_raw.describe())
 
-    # 3. Write the preprocessed data with respect to date
-    with open(file_out, 'w', encoding='utf-8') as f:
-        for time in time_series:
-            if time in data:
-                events = data[time]
-                for event in events:
-                    f.write(
-                        f"{time}\t{event['disease']}\t{event['serotype']}\t{event['species']}\t{event['country']}\t{event['outbreaks']}\n")
-            else:
-                f.write(f'{time}\tn/a\tn/a\tn/a\tn/a\tn/a\tn/a\n')
-
-
-# if count_by_row == False, increment y by number of outbreaks for the purpose of predicting the number of outbreaks of the target disease.
-# if count_by_row == True, increment y by each row regardless of number of outbreaks for the purpose of predicting whether the disease would occur or not.
-def distill(file_in, file_out, target_disease, count_by_row):
+    # 2. Get time range between the first date and the last date    
+    first_date = df_raw.index[0]
+    last_date = df_raw.index[-1]
+    time_series = pd.date_range(first_date, periods=(last_date - first_date).days)
     
-    data = dict()
-    lines = read_lines(file_in)
-    
-    for line in lines:
-        columns = line.split('\t')
-        date, disease, outbreaks = columns[0], columns[1], columns[5]
-        if disease == target_disease: 
-            if count_by_row:
-                try:
-                    data[date] += 1
-                except KeyError:
-                    data[date] = 1
-            else:
-                try:
-                    if outbreaks != 'None':
-                        data[date] += int(outbreaks)
-                    else:
-                        data[date] += 1
-                except KeyError:
-                    if outbreaks != 'None':
-                        data[date] = int(outbreaks)
-                    else:
-                        data[date] = 1
-        else:
-            if date not in data:
-                data[date] = 0
+    # 3. Make new dafaframe with respect to the region, i.e., five continents (Asia, Europe, America, Africa, Oceania)
+    unique_values = df_raw['region'].unique()    
+    df = pd.DataFrame(index=time_series, columns=unique_values)
+    df.index.name = 'timestamp'    
 
-    with open(file_out, 'w', encoding='utf-8') as f:
-        f.write('date\toutbreaks\n')
-        for key in data:
-            f.write(f'{key}\t{data[key]}\n')
+    for time_point in time_series:
+        rows = df_raw.loc[df_raw.index == time_point]                
+        regions = rows.groupby(['region']).size().to_frame().T
+                        
+        for col in regions.columns:            
+            df.loc[time_point][col] = regions.loc[0][col]
+
+    df.rename(columns={'아시아': 'Asia', '아프리카': 'Africa', '아메리카': 'America', '유럽': 'Europe', '오세아니아': 'Oceania'}, inplace=True)        
+    df.drop(columns=['None', 'Oceania'], inplace=True)  # remove Oceania to avoid data sparcity problem
+    df.fillna(0, inplace=True)    
+    print(df.describe())        
+
+    # 4. Write dataframe to csv
+    df.to_csv(file_out, sep='\t')
+
+        
+def verify(file_in, target_disease):
+    
+    df = csv_to_pd(file_in)
+
+    for col in df.columns:
+        plot(title=f'{target_disease}_{col}_plot', xlabel='timestamp', ylabel='number_of_outbreaks', x=df.index, y=df[col], save_path=os.path.join('data', f'{target_disease}_{col}.png'))
+
+    plot(title=f'{target_disease}_altogether', xlabel='timestamp', ylabel='number_of_outbreaks', x=df.index, y=df[:], save_path=os.path.join('data', f'{target_disease}_altogether.png'))            
+    plot(title=f'{target_disease}_sum', xlabel='timestamp', ylabel='number_of_outbreaks', x=df.index, y=df[:].sum(axis=1), save_path=os.path.join('data', f'{target_disease}_sum.png'))         
 
 
-def verify(file_in):
-    df = pd.read_csv(file_in, sep='\t')
-    df['date'] = pd.to_datetime(df['date'])
-    df.set_index('date', inplace=True)
+def csv_to_pd(data_path):
     
-    plt.figure(figsize=(12, 8))
-    plt.plot(df['outbreaks'])
-    plt.savefig(os.path.join('data', 'plot.png'))
+    df = pd.read_csv(data_path, sep='\t')    
+    df['timestamp'] = pd.to_datetime(df['timestamp'])
+    df.set_index('timestamp', inplace=True)
+    df = df[df.index > '2017-01-01']   # start from 2017 to avoid data sparcity problem.
+    
+    return df  
+
+
+def plot(title, xlabel, ylabel, x, y, save_path):
+    plt.figure(figsize=(12,8))
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.plot(x, y)
+    plt.savefig(save_path)
+
 
 
 if __name__ == '__main__':    
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--raw_data', type=str, help='path to OIE csv data')
-    parser.add_argument('--preprocessed_data', type=str, help='path to preprocessed data')
-    parser.add_argument('--distilled_data', type=str, help='path to distilled data')
+    parser.add_argument('--preprocessed_data', type=str, help='path to preprocessed data')    
     parser.add_argument('--target_disease', type=str, help='target disease to train & predict')
-    parser.add_argument('--count_by_row', action='store_true', help='increment y by a row or not')
+    # parser.add_argument('--count_by_row', action='store_true', help='increment y by a row or not')
     opt = parser.parse_args()
 
-    preprocess(opt.raw_data, opt.preprocessed_data)
-    distill(opt.preprocessed_data, opt.distilled_data, opt.target_disease, opt.count_by_row)
-    verify(opt.distilled_data)
+    preprocess(opt.raw_data, opt.preprocessed_data, opt.target_disease)    
+    verify(opt.preprocessed_data, 'ASF')
