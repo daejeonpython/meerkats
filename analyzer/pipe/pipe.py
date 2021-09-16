@@ -48,9 +48,9 @@ def preprocess(rows):
     for row in rows:        
         for idx, col in enumerate(row):
 
-            # 1. remove every linefeed in strings (convert into space)
+            # 1. remove every linefeed & tap in strings (convert into space)
             if type(col) == str:                            
-                row[idx] = col.replace('\n', ' ')
+                row[idx] = col.replace('\n', ' ').replace('\t', ' ')
             # 2. convert unmapped English disease term into Korean disease term using Levenshtein distance
             if row[2] not in reverse_disease_dict:                
                 row[2] = disease_convert(row[2].lower())
