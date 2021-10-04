@@ -1,5 +1,6 @@
 import os
 import argparse
+import easydict
 import math
 import numpy as np
 import pandas as pd
@@ -10,12 +11,12 @@ import torch
 from utils.datasets import create_dataloader
 from utils.preprocessor import csv_to_pd
 from utils.plots import plot_result
-from models.gru import BidirectionalGRU, UnidirectionalGRU
+from models.transformer import transformer
 
 
 def predict(opt):
     
-    device = opt.device    
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     with open(opt.weight, 'rb') as f:
         saved_model = torch.load(f)
@@ -25,13 +26,27 @@ def predict(opt):
     print(f"seq_len: {saved_model['seq_len']}")
 
     observed_df = csv_to_pd(opt.train_data)
-    test_df, dataloader = create_dataloader(opt.test_data, is_train=False, scaler=scaler, batch_size=opt.batch_size, seq_len=seq_len)    
-    
-    
-    model = BidirectionalGRU(n_features=test_df.shape[-1])
+    test_df, dataloader = create_dataloader(opt.test_data, is_train=False, scaler=scaler, batch_size=opt.batch_size, seq_len=seq_len)        
+
+    model_args = easydict.EasyDict({
+        'output_size': test_df.shape[-1],
+        'window_size': seq_len,
+        'batch_size': opt.batch_size,        
+        'e_features': test_df.shape[-1],
+        'd_features': test_df.shape[-1],
+        'd_hidn': 128,
+        'n_head': 4,
+        'd_head': 32,
+        'dropout': 0.2,
+        'd_ff': 128,
+        'n_layer': 3,
+        'dense_h': 128,        
+        'device': device
+    })
+
+    model = transformer(model_args).to(device)
     model.load_state_dict(saved_model['state'])    
-    model.eval()
-    model.to(device)
+    model.eval()    
 
     preds = []    
     with torch.no_grad():
@@ -43,7 +58,7 @@ def predict(opt):
                 break
             
             for i, (x, y) in enumerate(dataloader):
-                y_pred = model(test_seq)  # y_pred.shape = (1, n_features)  ex) (1, 4)                                                
+                y_pred = model(test_seq, test_seq)  # y_pred.shape = (1, n_features)  ex) (1, 4)                                                
                 preds.append(y_pred)                
 
                 new_seq = torch.cat((test_seq, y_pred.unsqueeze(axis=0)), 1)  # new_seq.shape = (1, seq_len + 1, n_features)  ex) (1, 11, 4)                
@@ -52,7 +67,7 @@ def predict(opt):
         
         else:            
             for i, (x, y) in enumerate(dataloader):                                                                            
-                y_pred = model(x.to(device))   # y_pred.shape = (1, n_features)  ex) (1, 4)                                                                                
+                y_pred = model(x.to(device), x.to(device))   # y_pred.shape = (1, n_features)  ex) (1, 4)                                                                                
                 preds.append(y_pred)
     
     preds = torch.stack(preds).squeeze(axis=1)
@@ -87,8 +102,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--train_data', type=str, default='data/train/train.csv', help='path to the observed (train) data only for visualization')
     parser.add_argument('--test_data', type=str, help='path to the test data')    
-    parser.add_argument('--device', type=str, help='cpu or cuda:0')
-    parser.add_argument('--batch_size', type=int)    
+    parser.add_argument('--batch_size', type=int)
     parser.add_argument('--weight', type=str, help='path to the weight file')
     parser.add_argument('--autoregressive', action='store_true')    
     opt = parser.parse_args()

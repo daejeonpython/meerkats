@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from utils.preprocessor import csv_to_pd
 
 
-def create_dataloader(data_path, is_train, scaler, batch_size, seq_len=10):
+def create_dataloader(data_path, is_train, scaler, batch_size, seq_len=10, ahead=1):
     
     df = csv_to_pd(data_path)    
     print(f'df.shape: {df.shape}')    

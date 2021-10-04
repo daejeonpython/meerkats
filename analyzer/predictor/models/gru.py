@@ -9,16 +9,16 @@ class BidirectionalGRU(torch.nn.Module):
             input_size=n_features,
             hidden_size=n_hidden,
             num_layers=n_layers,
-            bidirectional=True,
+            bidirectional=True,   
             dropout=0,
         )
         self.fc = torch.nn.Linear(n_hidden * 2, n_features)        
     
     def forward(self, x):
-        x = x.transpose(0, 1)  # (batch, seq, params) -> (seq, batch, params)
+        x = x.transpose(0, 1)  # (batch_size, seq_len, n_features) -> (seq_len, batch_size, n_features)  ex) (10, 1, 4)
         self.gru.flatten_parameters()
-        outs, _ = self.gru(x)        
-        out = self.fc(outs[-1])        
+        outs, _ = self.gru(x)  # outs.shape = (seq_len, batch_size, n_hidden * 2)  ex) (10, 1, 256)
+        out = self.fc(outs[-1])  # out.shape = (batch_size, n_features)  ex) (1, 256) x (256, 4) = (1, 4)
         return out
 
 
@@ -35,7 +35,7 @@ class UnidirectionalGRU(torch.nn.Module):
         self.fc = torch.nn.Linear(n_hidden, n_features)        
     
     def forward(self, x):
-        x = x.transpose(0, 1)  # (batch, seq, params) -> (seq, batch, params)
+        x = x.transpose(0, 1)
         self.gru.flatten_parameters()
         outs, _ = self.gru(x)        
         out = self.fc(outs[-1])        
