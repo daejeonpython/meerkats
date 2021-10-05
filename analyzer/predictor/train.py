@@ -15,19 +15,21 @@ def train(opt):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     epochs = opt.epochs
-    seq_len = opt.seq_len    
+    window_size = opt.window_size    
+    ahead = opt.ahead
 
-    df, train_loader, scaler = create_dataloader(opt.train_data, is_train=True, scaler=None, batch_size=opt.batch_size, seq_len=seq_len)
-    _, val_loader = create_dataloader(opt.validation_data, is_train=False, scaler=scaler, batch_size=opt.batch_size, seq_len=seq_len)
+    df, train_loader, scaler = create_dataloader(opt.train_data, is_train=True, scaler=None, batch_size=opt.batch_size, window_size=window_size, ahead=ahead)
+    _, val_loader = create_dataloader(opt.validation_data, is_train=False, scaler=scaler, batch_size=opt.batch_size, window_size=window_size, ahead=ahead)
 
     model_args = easydict.EasyDict({
         'output_size': df.shape[-1],
-        'window_size': opt.seq_len,
+        'window_size': window_size,
+        'ahead': ahead,
         'batch_size': opt.batch_size,
         'lr': 1e-3,
         'e_features': df.shape[-1],
         'd_features': df.shape[-1],
-        'd_hidn': 128,
+        'd_hidn': 256,
         'n_head': 4,
         'd_head': 32,
         'dropout': 0.2,
@@ -57,11 +59,11 @@ def train(opt):
         train_loss = 0
         for bs, (x, y) in enumerate(train_loader):            
             optimizer.zero_grad()
-            x = x.to(device)
-            y = y.to(device)            
-            y_pred = model(x, x)            
-            loss = loss_fn(y_pred, y)                        
-            loss.backward()                        
+            x = x.to(device)  # (batch_size, window_size, n_features)  ex) (128, 10, 4)
+            y = y.to(device)  # (batch_size, ahead, n_features)  ex) (128, 2, 4)
+            y_pred = model(x, x)
+            loss = loss_fn(y_pred, y)
+            loss.backward()         
             train_loss += loss.item()
             optimizer.step()
             
@@ -96,7 +98,8 @@ def train(opt):
                         'train_hist': train_hist,
                         'validation_hist': validation_hist,
                         'scaler': scaler,
-                        'seq_len': seq_len,                        
+                        'window_size': window_size,
+                        'ahead': ahead,                       
                     },
                     f,
                 )    
@@ -119,7 +122,8 @@ if __name__ == '__main__':
     parser.add_argument('--validation_data', type=str, default='data/val/val.csv', help='path to the validation data')        
     parser.add_argument('--epochs', type=int, help='number of epochs')
     parser.add_argument('--batch_size', type=int, help='batch size')    
-    parser.add_argument('--seq_len', type=int, default=10, help='sequence length to make a prediction')    
+    parser.add_argument('--window_size', type=int, default=10, help='sequence length to make a prediction')    
+    parser.add_argument('--ahead', type=int, default=1, help='prediction distance')    
     # parser.add_argument('--project', type=str, default='runs/train', help='save to project/name')
     # parser.add_argument('--save_period', type=int, default=10, help="log model after every 'save_period' epochs")
     opt = parser.parse_args()

@@ -125,10 +125,10 @@ class encoder(nn.Module):
         self.layers = nn.ModuleList([encoderlayer(self.args) for _ in range(self.args.n_layer)])
         self.enc_attn_probs = None
 
-    def forward(self, inputs):
+    def forward(self, inputs):  # inputs.shape = (batch_size, window_size, n_features)  ex) (128, 10 , 4)
         self.enc_attn_probs = []
-        positions = torch.arange(inputs.size(2), device=inputs.device).expand(inputs.size(0), inputs.size(2)).contiguous()
-        outputs = self.enc_emb(inputs.transpose(2, 1).contiguous()) + self.pos_emb(positions)
+        positions = torch.arange(inputs.size(2), device=inputs.device).expand(inputs.size(0), inputs.size(2)).contiguous()  # (batch_size, n_features)  ex) (128, 4)
+        outputs = self.enc_emb(inputs.transpose(2, 1).contiguous()) + self.pos_emb(positions)  # (batch_size, n_features, n_hidn)  ex) (128, 4, 256)
 
         for layer in self.layers:
             outputs, enc_attn_prob = layer(outputs)
@@ -193,7 +193,7 @@ class TimeDistributed(nn.Module):
 
     def forward(self, x):
 
-        if len(x.size()) <= 2:
+        if len(x.size()) <= 2:  # (batch_size, window_size * d_hidn)  ex) (128, 2560)
             return self.module(x)
         
         x_reshape = x.contiguous().view(-1, x.size(-1))  # (samples * timesteps, input_size)
@@ -212,13 +212,15 @@ class transformer(nn.Module):
         self.encoder = encoder(self.args)
         self.decoder = decoder(self.args)
         self.fc1 = TimeDistributed(nn.Linear(in_features=self.args.window_size*self.args.d_hidn, out_features=self.args.dense_h))
-        self.fc2 = TimeDistributed(nn.Linear(in_features=self.args.dense_h, out_features=self.args.output_size))
+        self.fc2 = TimeDistributed(nn.Linear(in_features=self.args.dense_h, out_features=self.args.ahead * self.args.output_size))
 
     def forward(self, enc_inputs, dec_inputs):
-        enc_outputs = self.encoder(enc_inputs)
-        dec_outputs = self.decoder(dec_inputs, enc_outputs)
+        enc_outputs = self.encoder(enc_inputs)  # (batch_size, n_features, d_hidn)  ex) (128, 4, 256)
+        dec_outputs = self.decoder(dec_inputs, enc_outputs)  # (batch_size, window_size, d_hidn)  ex) (128, 10, 256)
         
-        dec_outputs = self.fc1(dec_outputs.view(dec_outputs.size(0), -1))
-        dec_outputs = self.fc2(dec_outputs)
+        # dec_outputs.view(dec_outputs.size(0), -1).shape = (batch_size, window_size * d_hidn)  ex) (128, 2560)
+        dec_outputs = self.fc1(dec_outputs.view(dec_outputs.size(0), -1))  # (batch_size, dense_h)   ex) (128, 128)
+        dec_outputs = self.fc2(dec_outputs)  # (batch_size, ahead * output_size)  ex) (128, 8)
+        dec_outputs = dec_outputs.view(dec_outputs.size(0), self.args.ahead, self.args.output_size)  #  ex) (128, 2, 4)
 
         return dec_outputs

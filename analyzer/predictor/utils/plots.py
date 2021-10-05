@@ -18,7 +18,7 @@ def plot(title, xlabel, ylabel, x, y, save_path):
     plt.savefig(save_path)
 
 
-def plot_result(observed_df, test_df, predicted_cases, col, seq_len, show_observed_cases):
+def plot_result(observed_df, test_df, predicted_cases, col, window_size, ahead, show_observed_cases):
 
     plt.figure(figsize=(12, 8))
     plt.title(f'Prediction Graph in {col}')
@@ -28,12 +28,12 @@ def plot_result(observed_df, test_df, predicted_cases, col, seq_len, show_observ
     if show_observed_cases:
         plt.plot(observed_df.index, observed_df[col], label='Observed Daily Cases')                
         plt.plot(test_df.index, test_df[col], label='True Cases')        
-        plt.plot(test_df.index[seq_len + 1:], predicted_cases, label='Predicted Cases')        
+        plt.plot(test_df.index[(window_size + 1):len(test_df) - 1], predicted_cases, label='Predicted Cases')        
         plt.legend()
         plt.savefig(os.path.join('runs', f'{col}_observation+prediction.png'))  
     
     else:
         plt.plot(test_df.index, test_df[col], label='True Cases')        
-        plt.plot(test_df.index[seq_len + 1:], predicted_cases, label='Predicted Cases')        
+        plt.plot(test_df.index[(window_size + 1):len(test_df) - 1], predicted_cases, label='Predicted Cases')        
         plt.legend()
         plt.savefig(os.path.join('runs', f'{col}_prediction.png'))  

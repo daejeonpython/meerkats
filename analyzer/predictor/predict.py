@@ -21,20 +21,23 @@ def predict(opt):
     with open(opt.weight, 'rb') as f:
         saved_model = torch.load(f)
     scaler = saved_model['scaler']
-    seq_len = saved_model['seq_len']
+    window_size = saved_model['window_size']
+    ahead = saved_model['ahead']
     print(f"best epoch: {saved_model['best_epoch']}")
-    print(f"seq_len: {saved_model['seq_len']}")
+    print(f"window_size: {window_size}")
+    print(f'ahead: {ahead}')
 
     observed_df = csv_to_pd(opt.train_data)
-    test_df, dataloader = create_dataloader(opt.test_data, is_train=False, scaler=scaler, batch_size=opt.batch_size, seq_len=seq_len)        
+    test_df, dataloader = create_dataloader(opt.test_data, is_train=False, scaler=scaler, batch_size=opt.batch_size, window_size=window_size, ahead=ahead) 
 
     model_args = easydict.EasyDict({
         'output_size': test_df.shape[-1],
-        'window_size': seq_len,
+        'window_size': window_size,
+        'ahead': ahead,
         'batch_size': opt.batch_size,        
         'e_features': test_df.shape[-1],
         'd_features': test_df.shape[-1],
-        'd_hidn': 128,
+        'd_hidn': 256,
         'n_head': 4,
         'd_head': 32,
         'dropout': 0.2,
@@ -54,47 +57,46 @@ def predict(opt):
         if opt.autoregressive:
             # Feed prediction result back to input            
             for i, (x, _) in enumerate(dataloader):
-                test_seq = x.to(device)  # test_seq.shape = (1, seq_len, n_features)  ex) (1, 10, 4)                
+                test_seq = x.to(device)  # test_seq.shape = (1, window_size, n_features)  ex) (1, 10, 4)                
                 break
             
             for i, (x, y) in enumerate(dataloader):
                 y_pred = model(test_seq, test_seq)  # y_pred.shape = (1, n_features)  ex) (1, 4)                                                
                 preds.append(y_pred)                
 
-                new_seq = torch.cat((test_seq, y_pred.unsqueeze(axis=0)), 1)  # new_seq.shape = (1, seq_len + 1, n_features)  ex) (1, 11, 4)                
+                new_seq = torch.cat((test_seq, y_pred.unsqueeze(axis=0)), 1)  # new_seq.shape = (1, window_size + 1, n_features)  ex) (1, 11, 4)                
                 new_seq = new_seq[:, 1:, :]  # new_seq.shape = (1, 10, 4)                
                 test_seq = new_seq                
         
         else:            
             for i, (x, y) in enumerate(dataloader):                                                                            
-                y_pred = model(x.to(device), x.to(device))   # y_pred.shape = (1, n_features)  ex) (1, 4)                                                                                
+                y_pred = model(x.to(device), x.to(device))   # y_pred.shape = (batch_size, ahead. n_features)  ex) (1, 2, 4)                                                                                
                 preds.append(y_pred)
     
-    preds = torch.stack(preds).squeeze(axis=1)
-    preds = pd.DataFrame(preds.cpu().numpy(), columns=test_df.columns)        
+    preds = torch.stack(preds).squeeze(axis=1)  # (len(test_df) - window_size - ahead, ahead, n_features)
+    df_preds = []
 
-    evaluate(observed_df, test_df, scaler, preds, seq_len)
+    for i in range(ahead):
+        df_preds.append(pd.DataFrame(preds[:,i,:].cpu().numpy(), columns=test_df.columns))        
+
+    evaluate(observed_df, test_df, scaler, df_preds, window_size, ahead)    
 
 
-def evaluate(observed_df, test_df, scaler, preds, seq_len):
+def evaluate(observed_df, test_df, scaler, df_preds, window_size, ahead):
     
     for col in test_df.columns:
         print(col)
         
-        predicted_cases = scaler.inverse_transform(np.expand_dims(preds[col], axis=0)).flatten()
+        predicted_cases = scaler.inverse_transform(np.expand_dims(df_preds[0][col], axis=0)).flatten()
         true_cases = np.array(test_df[col])
-        true_cases = true_cases[seq_len + 1:]
+        true_cases = true_cases[(window_size + 1):len(true_cases) - 1]  # ahead = 1
 
-        print(f'pearson correlation coefficient: {pearsonr(true_cases, predicted_cases)}')
-        print(f'r2 score: {r2_score(true_cases, predicted_cases)}')        
-        print(f'mean absolute error (MAE): {mean_absolute_error(true_cases, predicted_cases)}')        
-        print(f'median absolute error: {median_absolute_error(true_cases, predicted_cases)}')
-        print(f'mean squared error (MSE): {mean_squared_error(true_cases, predicted_cases)}')
+        print(f'pearson correlation coefficient: {pearsonr(true_cases, predicted_cases)}')        
         print(f'root mean squared error (RMSE): {math.sqrt(mean_squared_error(true_cases, predicted_cases))}')
-        print(f'mean absolute percentage error (MAPE): {mean_absolute_percentage_error(true_cases, predicted_cases)}\n')
-                
-        plot_result(observed_df, test_df, predicted_cases, col, seq_len, show_observed_cases=True)
-        plot_result(observed_df, test_df, predicted_cases, col, seq_len, show_observed_cases=False)
+        print(f'mean absolute error (MAE): {mean_absolute_error(true_cases, predicted_cases)}\n')
+
+        plot_result(observed_df, test_df, predicted_cases, col, window_size, ahead, show_observed_cases=True)
+        plot_result(observed_df, test_df, predicted_cases, col, window_size, ahead, show_observed_cases=False)
         
 
 if __name__ == '__main__':    

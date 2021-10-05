@@ -6,7 +6,7 @@ from sklearn.preprocessing import MinMaxScaler
 from utils.preprocessor import csv_to_pd
 
 
-def create_dataloader(data_path, is_train, scaler, batch_size, seq_len=10, ahead=1):
+def create_dataloader(data_path, is_train, scaler, batch_size, window_size, ahead):
     
     df = csv_to_pd(data_path)    
     print(f'df.shape: {df.shape}')    
@@ -23,7 +23,7 @@ def create_dataloader(data_path, is_train, scaler, batch_size, seq_len=10, ahead
         print(f'boundary_check: {boundary_check(scaled_outbreaks)}')
         scaled_outbreaks = torch.from_numpy(scaled_outbreaks).float() # numpy default float64 -> torch default float32
         
-        dataset = OIEDataset(scaled_outbreaks, seq_len)            
+        dataset = OIEDataset(scaled_outbreaks, window_size, ahead)            
         dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
         return df, dataloader, scaler
         
@@ -35,7 +35,7 @@ def create_dataloader(data_path, is_train, scaler, batch_size, seq_len=10, ahead
         print(f'boundary_check: {boundary_check(scaled_outbreaks)}')
         scaled_outbreaks = torch.from_numpy(scaled_outbreaks).float() # numpy default float64 -> torch default float32
         
-        dataset = OIEDataset(scaled_outbreaks, seq_len)  
+        dataset = OIEDataset(scaled_outbreaks, window_size, ahead)  
         dataloader = DataLoader(dataset, batch_size=batch_size)
         return df, dataloader
 
@@ -46,11 +46,11 @@ def boundary_check(x):
 
 class OIEDataset(Dataset):
     
-    def __init__ (self, data, seq_len):                
+    def __init__ (self, data, window_size, ahead):                
         
         self.data = data
-        self.seq_len = seq_len
-        self.x, self.y = create_sequences(self.data, self.seq_len)        
+        self.window_size = window_size
+        self.x, self.y = create_sequences(self.data, self.window_size, ahead)
 
     def __len__(self):
         return len(self.x)
@@ -59,19 +59,19 @@ class OIEDataset(Dataset):
         return self.x[index], self.y[index]
         
 
-def create_sequences(data, seq_len):
+def create_sequences(data, window_size, ahead):
     xs = []
     ys = []
 
-    for i in range(len(data) - seq_len - 1):
-        x = data[i:(i + seq_len)]
-        y = data[i + seq_len]
+    for i in range(len(data) - window_size - ahead):
+        x = data[i:(i + window_size)]
+        y = data[(i + window_size):(i + window_size + ahead)]
+        # y = data[i + window_size]
         xs.append(x)
         ys.append(y)
     
-    # torch.stack(xs).shape = ((data_len - seq_len - 1), seq_len, n_features)  ex) (1341, 10, 4)
-    # torch.stack(ys).shape = ((data_len - seq_len - 1), n_features)  ex) (1341, 4)
-    # For each sequence of 'seq_len' data points 
+    # torch.stack(xs).shape = ((data_len - window_size - 1), window_size, n_features)  ex) (1341, 10, 4)
+    # torch.stack(ys).shape = ((data_len - window_size - 1), ahead, n_features)  ex) (1341, 1, 4)    
     return torch.stack(xs), torch.stack(ys)
 
 
