@@ -1,5 +1,8 @@
+import os
 import argparse
 import json
+import time
+from pprint import pprint
 import pymysql
 from elasticsearch.client import Elasticsearch
 from elasticsearch import helpers
@@ -7,21 +10,21 @@ from utils.edit_distance import disease_convert, species_convert
 from utils.en2kr_dict import disease_dict, species_dict
 
 
-def read_from_mysql(host, user, password, database, table):
+def read_from_mysql(opt):
     
     print('Reading data from db...')
     
     try:
-        conn = pymysql.connect(host=host, user=user, password=password)
+        conn = pymysql.connect(host=opt.mysql_host, user=opt.mysql_user, password=opt.mysql_password)
         curs = conn.cursor()
         curs.execute('SHOW DATABASES')
         db_info = curs.fetchall()
         print(f'# Database information: {db_info}')
 
-        curs.execute('SHOW TABLES FROM ' + database)
+        curs.execute('SHOW TABLES FROM ' + opt.mysql_database)
         table_info = curs.fetchall()
-        print(f'# List of tables of {user}: {table_info}')
-        target_table = database + '.' + table
+        print(f'# List of tables of {opt.mysql_user}: {table_info}')
+        target_table = opt.mysql_database + '.' + opt.mysql_table
         
         curs.execute('SELECT * FROM ' + target_table)
         column_names = [x[0] for x in curs.description]
@@ -61,15 +64,15 @@ def preprocess(rows):
     return rows
 
 
-def write_to_elastic(host, es_user, es_password, mapping_definition, index_name, rows):
+def write_to_elastic(opt, rows):
     
     print('Writing extracted data into Elasticsearch...')
-    es = Elasticsearch(hosts=[host], http_auth=(es_user, es_password))
-    with open(mapping_definition, 'r', encoding='utf-8') as json_file:
+    es = Elasticsearch(hosts=[opt.es_host], http_auth=(opt.es_user, opt.es_password))
+    with open(opt.es_mapping, 'r', encoding='utf-8') as json_file:
         mapping = json.load(json_file)
 
-    if es.indices.exists(index=index_name) is False:
-        es.indices.create(index=index_name, body=mapping)
+    if es.indices.exists(index=opt.es_index) is False:
+        es.indices.create(index=opt.es_index, body=mapping)
     
     bulk_actions = []
   
@@ -82,7 +85,7 @@ def write_to_elastic(host, es_user, es_password, mapping_definition, index_name,
             row[18] = [float(x) for x in row[18]]    
         
         action = {
-                '_index': index_name,
+                '_index': opt.es_index,
                 '_id': row[0] - 1,  # current ES index (oie_reports_kr_ver2) _id starts from 0 while mysql db (oie_reports_kr) rowid starts from 1
                 '발생일': row[8],
                 '질병': row[2],
@@ -108,9 +111,45 @@ def write_to_elastic(host, es_user, es_password, mapping_definition, index_name,
     print('ES indexing is done.')
 
 
-def write_to_csv(path, rows, column_names):
+# Delete ES documents that do not exist in DB table
+def sync(opt):
+
+    es = Elasticsearch(hosts=[opt.es_host], http_auth=(opt.es_user, opt.es_password))
+    res = helpers.scan(es, index=opt.es_index, query={'query': {'match_all': {}}})
+    res = list(res)
+    print(f'Number of ES documents: {len(res)}')
+
+    try:
+        conn = pymysql.connect(host=opt.mysql_host, user=opt.mysql_user, password=opt.mysql_password)
+        curs = conn.cursor()
+        table = opt.mysql_database + '.' + opt.mysql_table
+        
+        mismatched_ids = []
+                    
+        for idx, doc in enumerate(res):
+            if idx % 100 == 0:
+                print(f'progress: ({idx}/{len(res)})')
     
-    with open(path, 'w', encoding='utf-8') as f:
+            curs.execute('SELECT * FROM ' + table + ' WHERE rowid=' + str(int(doc['_id']) + 1))
+    
+            if curs.rowcount == 0:
+                with open(os.path.join('log', 'sync.log'), 'a', encoding='utf-8') as f:
+                    current_time = time.strftime('%y/%m/%d\t%H:%M:%S', time.localtime())
+                    f.write(f'{current_time}\tdeleted document\t{doc}\n')
+                    mismatched_ids.append(doc['_id'])
+                    
+        res = es.delete_by_query(index=opt.es_index, body={'query': {'terms': {'_id': mismatched_ids}}})
+        pprint(res)
+        
+        print(f'Number of mismatches between DB & ES: {len(mismatched_ids)}')
+            
+    except Exception as ex:
+        print(ex)
+
+
+def write_to_csv(opt, rows, column_names):
+    
+    with open(opt.csv_path, 'w', encoding='utf-8') as f:
         for idx, col_name in enumerate(column_names):
             if idx != len(column_names) - 1:
                 f.write(f'{col_name}\t')
@@ -128,9 +167,10 @@ def write_to_csv(path, rows, column_names):
 
 
 def pipe(opt):
-    rows, column_names = read_from_mysql(opt.mysql_host, opt.mysql_user, opt.mysql_password, opt.mysql_database, opt.mysql_table)
-    write_to_elastic(opt.es_host, opt.es_user, opt.es_password, opt.es_mapping, opt.es_index, rows)
-    write_to_csv(opt.csv_path, rows, column_names)
+    rows, column_names = read_from_mysql(opt)
+    write_to_elastic(opt, rows)
+    sync(opt)
+    write_to_csv(opt, rows, column_names)
 
 
 if __name__ == '__main__':
