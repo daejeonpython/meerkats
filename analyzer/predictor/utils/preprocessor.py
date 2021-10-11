@@ -1,10 +1,11 @@
 import os
 import argparse
 import pandas as pd
+from pandas.io.parsers import count_empty_vals
 from utils.plots import plot
 
 
-def preprocess(file_in, file_out, target_disease):
+def preprocess(file_in, file_out, target_disease, spatial_resolution, target_location, count_by_outbreaks):
         
     # 1. read raw data and extract desired columns
     df_raw = pd.read_csv(file_in, sep='\t')            
@@ -22,29 +23,34 @@ def preprocess(file_in, file_out, target_disease):
     time_series = pd.date_range(first_date, periods=(last_date - first_date).days)
     
     # 3. Make new dafaframe with respect to the spatial resolution
-    # ex) continents (Asia, Europe, America, Africa, Oceania) or countries (Korea, China, Russia)
-    unique_values = df_raw['region'].unique()  # return unique values from the target column
-    # unique_values = df_raw['country'].unique()    
-    df = pd.DataFrame(index=time_series, columns=unique_values)  # make new dataframe with columns of unique values
-    df.index.name = 'timestamp'    
+    # ex) continents (Asia, Europe, America, Africa, Oceania) or countries (Korea, Japan, China, Russia)    
+    target_location = target_location.split(',')    
+    df = pd.DataFrame(index=time_series, columns=target_location)  # make new dataframe with columns of unique values            
+    df.index.name = 'timestamp'
 
-    for time_point in time_series:
-        # for each time_point (ex 2016-03-04), return every row that matches the time_point from raw dataframe              
-        rows = df_raw.loc[df_raw.index == time_point]  
-        regions = rows.groupby(['region']).size().to_frame().T                
-        # regions = rows.groupby(['country']).size().to_frame().T
-        '''
-        (regions example)
-        region  아시아  아프리카  유럽
-        0         2     1  13
-        '''
-                        
-        for col in regions.columns:            
-            df.loc[time_point][col] = regions.loc[0][col]
+    for time_point in time_series:   
         
-    df.drop(columns=['None', '오세아니아'], inplace=True)  # remove Oceania to avoid data sparcity problem
-    # df = df[['대한민국', '중국', '러시아']]
-    df.fillna(0, inplace=True)    
+        # for each time_point (ex 2016-03-04), return every row that matches the time_point from raw dataframe                   
+        rows = df_raw.loc[df_raw.index == time_point]        
+        
+        if count_by_outbreaks:  # count by number of outbreaks
+            for column in target_location:
+                outbreaks = pd.Series(rows[rows[spatial_resolution] == column]['outbreaks'])            
+                # convert 'None' str value into int 1
+                for idx, val in enumerate(outbreaks):
+                    try:
+                        outbreaks[idx] = int(val)
+                    except ValueError:
+                        outbreaks[idx] = 1                
+                df.loc[time_point][column] = outbreaks.sum()
+
+        else:  # count by number of rows
+            targets = rows.groupby([spatial_resolution]).size().to_frame().T                        
+            for col in targets.columns:            
+                df.loc[time_point][col] = targets.loc[0][col]
+    
+        
+    df.fillna(0, inplace=True) 
     print(f'Preprocessed data statistics:\n{df.describe()}\n')
 
     # 4. Write dataframe to csv
@@ -98,7 +104,9 @@ if __name__ == '__main__':
     parser.add_argument('--raw_data', type=str, help='path to OIE csv data')
     parser.add_argument('--preprocessed_data', type=str, help='path to preprocessed data')    
     parser.add_argument('--target_disease', type=str, help='target disease to train & predict')
-    # parser.add_argument('--count_by_row', action='store_true', help='increment y by a row or not')
+    parser.add_argument('--spatial_resolution', type=str, help='spatial resolution: country or region')
+    parser.add_argument('--target_location', type=str, help='target location to train & predict')
+    parser.add_argument('--count_by_outbreaks', action='store_true', help='If true, count by number of outbreaks. If false, count by number of rows')
     parser.add_argument('--time_range', type=str, default='2017-01-01', help='time range to look up (start time)')
     parser.add_argument('--build_dataset', action='store_true', help='build train/val csv from preprocessed data')
     parser.add_argument('--split_ratio', type=float, default=0.2, help='split ratio between train data and test data')    
@@ -106,7 +114,7 @@ if __name__ == '__main__':
     parser.add_argument('--val_dir', type=str, default='data/val', help='path to validation data directory')
     opt = parser.parse_args()
 
-    preprocess(opt.raw_data, opt.preprocessed_data, opt.target_disease)    
+    preprocess(opt.raw_data, opt.preprocessed_data, opt.target_disease, opt.spatial_resolution, opt.target_location, opt.count_by_outbreaks)    
     verify(opt.preprocessed_data, opt.target_disease, opt.time_range)
 
     if opt.build_dataset:

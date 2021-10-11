@@ -98,8 +98,18 @@ def train(opt):
                         'train_hist': train_hist,
                         'validation_hist': validation_hist,
                         'scaler': scaler,
-                        'window_size': window_size,
-                        'ahead': ahead,                       
+                        'output_size': model_args.output_size,
+                        'window_size': model_args.window_size,
+                        'ahead': model_args.ahead,
+                        'e_features': model_args.e_features,
+                        'd_features': model_args.d_features,
+                        'd_hidn': model_args.d_hidn,
+                        'n_head': model_args.n_head,
+                        'd_head': model_args.d_head,
+                        'dropout': model_args.dropout,
+                        'd_ff': model_args.d_ff,
+                        'n_layer': model_args.n_layer,
+                        'dense_h': model_args.dense_h,
                     },
                     f,
                 )    
@@ -108,8 +118,8 @@ def train(opt):
     plt.title('Training Loss Graph')
     plt.xlabel('epochs')
     plt.ylabel('loss')
-    plt.plot(train_hist, label='Training Loss')
-    plt.plot(validation_hist, label='Validation Loss')
+    plt.plot(train_hist[5:], label='Training Loss')
+    plt.plot(validation_hist[5:], label='Validation Loss')
     plt.legend()
     plt.savefig(os.path.join('runs', 'loss.png'))
     plt.show()    

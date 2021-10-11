@@ -213,6 +213,7 @@ class transformer(nn.Module):
         self.decoder = decoder(self.args)
         self.fc1 = TimeDistributed(nn.Linear(in_features=self.args.window_size*self.args.d_hidn, out_features=self.args.dense_h))
         self.fc2 = TimeDistributed(nn.Linear(in_features=self.args.dense_h, out_features=self.args.ahead * self.args.output_size))
+        self.activation = nn.SELU()
 
     def forward(self, enc_inputs, dec_inputs):
         enc_outputs = self.encoder(enc_inputs)  # (batch_size, n_features, d_hidn)  ex) (128, 4, 256)
@@ -220,7 +221,8 @@ class transformer(nn.Module):
         
         # dec_outputs.view(dec_outputs.size(0), -1).shape = (batch_size, window_size * d_hidn)  ex) (128, 2560)
         dec_outputs = self.fc1(dec_outputs.view(dec_outputs.size(0), -1))  # (batch_size, dense_h)   ex) (128, 128)
-        dec_outputs = self.fc2(dec_outputs)  # (batch_size, ahead * output_size)  ex) (128, 8)
+        dec_outputs = self.activation(dec_outputs)
+        dec_outputs = self.fc2(dec_outputs)  # (batch_size, ahead * output_size)  ex) (128, 8)                
         dec_outputs = dec_outputs.view(dec_outputs.size(0), self.args.ahead, self.args.output_size)  #  ex) (128, 2, 4)
 
         return dec_outputs
