@@ -4,6 +4,9 @@
           "건수": {
             "type": "long"
           },
+          "예측건수": {
+            "type": "long"
+          },
           "구분": {
             "type": "text",
             "fields": {
