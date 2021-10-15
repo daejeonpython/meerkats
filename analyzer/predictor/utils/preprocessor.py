@@ -1,8 +1,8 @@
 import os
 import argparse
 import pandas as pd
-from pandas.io.parsers import count_empty_vals
 from utils.plots import plot
+import datetime
 
 
 def preprocess(file_in, file_out, target_disease, spatial_resolution, target_location, count_by_outbreaks):
@@ -17,10 +17,11 @@ def preprocess(file_in, file_out, target_disease, spatial_resolution, target_loc
     df_raw = df_raw[df_raw['disease'] == target_disease]
     print(f'Raw data statistics:\n{df_raw.describe()}\n')
 
-    # 2. Get time range between the first date and the last date    
-    first_date = df_raw.index[0]
-    last_date = df_raw.index[-1]
-    time_series = pd.date_range(first_date, periods=(last_date - first_date).days)
+    # 2. Get time range between the first date and YESTERDAY
+    first_date = df_raw.index[0]        
+    today = datetime.datetime.now()
+    today = today.replace(hour=0, minute=0, second=0, microsecond=0)    
+    time_series = pd.date_range(first_date, periods=(today - first_date).days)
     
     # 3. Make new dafaframe with respect to the spatial resolution
     # ex) continents (Asia, Europe, America, Africa, Oceania) or countries (Korea, Japan, China, Russia)    
@@ -105,7 +106,7 @@ if __name__ == '__main__':
     parser.add_argument('--preprocessed_data', type=str, help='path to preprocessed data')    
     parser.add_argument('--target_disease', type=str, help='target disease to train & predict')
     parser.add_argument('--spatial_resolution', type=str, help='spatial resolution: country or region')
-    parser.add_argument('--target_location', type=str, help='target location to train & predict')
+    parser.add_argument('--target_location', type=str, help='target location to train & predict. Separate by comma. ex) 대한민국,중국,러시아')
     parser.add_argument('--count_by_outbreaks', action='store_true', help='If true, count by number of outbreaks. If false, count by number of rows')
     parser.add_argument('--time_range', type=str, default='2017-01-01', help='time range to look up (start time)')
     parser.add_argument('--build_dataset', action='store_true', help='build train/val csv from preprocessed data')

@@ -10,7 +10,7 @@ from utils.edit_distance import disease_convert, species_convert
 from utils.en2kr_dict import disease_dict, species_dict
 
 
-def read_from_mysql(opt):
+def read_mysql(opt):
     
     print('Reading data from db...')
     
@@ -64,7 +64,7 @@ def preprocess(rows):
     return rows
 
 
-def write_to_elastic(opt, rows):
+def write_elastic(opt, rows):
     
     print('Writing extracted data into Elasticsearch...')
     es = Elasticsearch(hosts=[opt.es_host], http_auth=(opt.es_user, opt.es_password))
@@ -96,14 +96,12 @@ def write_to_elastic(opt, rows):
                 '지역': row[3],
                 '국가': row[4],
                 '발생 지역': row[9],
-                '위경도': row[18]
+                '위경도': row[18],
         }
         # If the coordinate is None, remove from the document
         if row[18] == None:
             del action['위경도']
         
-        # indexing one document at a time
-        # es.index(index=index_name, id=idx, doc_type='_doc', body=action)
         bulk_actions.append(action)
 
     # bulk indexing
@@ -111,7 +109,7 @@ def write_to_elastic(opt, rows):
     print('ES indexing is done.')
 
 
-# Delete ES documents that do not exist in DB table
+# Maintain sync between DB table and ES documnet
 def sync(opt):
 
     es = Elasticsearch(hosts=[opt.es_host], http_auth=(opt.es_user, opt.es_password))
@@ -125,29 +123,40 @@ def sync(opt):
         table = opt.mysql_database + '.' + opt.mysql_table
         
         mismatched_ids = []
+        outdated_preds = []
                     
         for idx, doc in enumerate(res):
-            if idx % 100 == 0:
+            if idx % 1000 == 0:
                 print(f'progress: ({idx}/{len(res)})')
     
-            curs.execute('SELECT * FROM ' + table + ' WHERE rowid=' + str(int(doc['_id']) + 1))
+            try:
+                rowid = str(int(doc['_id']) + 1)  # _id of observation is always an integer            
+                curs.execute("SELECT * FROM " + table + " WHERE rowid='" + rowid + "';")
     
-            if curs.rowcount == 0:
-                with open(os.path.join('log', 'sync.log'), 'a', encoding='utf-8') as f:
-                    current_time = time.strftime('%y/%m/%d\t%H:%M:%S', time.localtime())
-                    f.write(f'{current_time}\tdeleted document\t{doc}\n')
-                    mismatched_ids.append(doc['_id'])
+                if curs.rowcount == 0:
+                    with open(os.path.join('log', 'sync.log'), 'a', encoding='utf-8') as f:
+                        current_time = time.strftime('%y/%m/%d\t%H:%M:%S', time.localtime())
+                        f.write(f'{current_time}\tdeleted document\t{doc}\n')
+                        mismatched_ids.append(doc['_id'])
+            except:
+                outdated_preds.append(doc['_id']) # _id of prediction is a random string
+                
                     
+        # Delete ES documnets that do not exist anymore in DB table
         res = es.delete_by_query(index=opt.es_index, body={'query': {'terms': {'_id': mismatched_ids}}})
         pprint(res)
+        print(f'Number of mismatches between DB & ES: {len(mismatched_ids)}\n')
+        # Delete outdated predictions
+        res = es.delete_by_query(index=opt.es_index, body={'query': {'terms': {'_id': outdated_preds}}})
+        pprint(res)
+        print('Outdated predictions are deleted.')
         
-        print(f'Number of mismatches between DB & ES: {len(mismatched_ids)}')
             
     except Exception as ex:
         print(ex)
 
 
-def write_to_csv(opt, rows, column_names):
+def write_csv(opt, rows, column_names):
     
     with open(opt.csv_path, 'w', encoding='utf-8') as f:
         for idx, col_name in enumerate(column_names):
@@ -167,10 +176,10 @@ def write_to_csv(opt, rows, column_names):
 
 
 def pipe(opt):
-    rows, column_names = read_from_mysql(opt)
-    write_to_elastic(opt, rows)
+    rows, column_names = read_mysql(opt)
+    write_csv(opt, rows, column_names)
     sync(opt)
-    write_to_csv(opt, rows, column_names)
+    write_elastic(opt, rows)
 
 
 if __name__ == '__main__':

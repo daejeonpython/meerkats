@@ -2,6 +2,7 @@ import argparse
 import easydict
 import numpy as np
 import pandas as pd
+from datetime import timedelta
 
 import torch
 from utils.preprocessor import csv_to_pd
@@ -9,7 +10,7 @@ from utils.plots import plot_inference_result
 from models.transformer import transformer
 
 
-def predict(opt):
+def inference(opt):
     
     device = 'cuda' if torch.cuda.is_available() else 'cpu'    
 
@@ -29,7 +30,7 @@ def predict(opt):
         'output_size': saved_model['output_size'],
         'window_size': window_size,
         'ahead': ahead,
-        'batch_size': opt.batch_size,        
+        'batch_size': 1,        
         'e_features': saved_model['e_features'],
         'd_features': saved_model['d_features'],
         'd_hidn': saved_model['d_hidn'],
@@ -53,20 +54,47 @@ def predict(opt):
         x = torch.from_numpy(x).float().unsqueeze(0)
         y_pred = model(x.to(device), x.to(device))   # y_pred.shape = (batch_size, ahead. n_features)  ex) (1, 2, 4)            
         y_pred = y_pred.cpu().numpy()        
-      
+
+    prediction = []    
     for idx, col in enumerate(observed_df.columns):                
         future = pd.date_range(observed_df.index[-1], periods=ahead + 1)
-        predicted_cases = scaler.inverse_transform(y_pred[:, :, idx]).flatten()
-        predicted_cases = np.append(observed_df[col][-1], predicted_cases)        
-        plot_inference_result(observed_df, col, future, predicted_cases)          
+        predicted_cases = scaler.inverse_transform(y_pred[:, :, idx]).flatten()        
+        print(predicted_cases)
+        prediction.append(predicted_cases)
+        plot_inference_result(observed_df, col, future, np.append(observed_df[col][-1], predicted_cases))  # append the last observed day to draw a prettier graph
         
+    prediction = np.stack(prediction)
+    return prediction, ahead
+
+
+def write_down(prediction, ahead, pred_csv):
+
+    df_form = csv_to_pd(opt.test_data)    
+    columns = [x for x in df_form.columns]
+
+    yesterday = df_form.index[-1]
+    today = yesterday + timedelta(days=1)
+    future = yesterday + timedelta(days=ahead)
+    time_series = pd.date_range(today, periods=(future - yesterday).days)
+    
+    pred_df = pd.DataFrame(index=time_series, columns=columns)
+    pred_df.index.name = 'timestamp'    
+    
+    for t, time_point in enumerate(time_series):
+        for c, col in enumerate(pred_df.columns):
+            pred_df.loc[time_point][col] = prediction[c][t]
+    
+    pred_df.to_csv(pred_csv, sep='\t')
+
+
 
 if __name__ == '__main__':    
     
     parser = argparse.ArgumentParser()
-    parser.add_argument('--test_data', type=str, help='path to the test data')    
-    parser.add_argument('--batch_size', type=int)
+    parser.add_argument('--test_data', type=str, help='path to the test data')        
     parser.add_argument('--weight', type=str, help='path to the weight file')    
+    parser.add_argument('--pred_csv', type=str, help='path to the prediction output')
     opt = parser.parse_args()
     
-    predict(opt)
+    prediction, ahead = inference(opt)
+    write_down(prediction, ahead, opt.pred_csv)

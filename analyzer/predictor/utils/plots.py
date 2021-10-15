@@ -30,13 +30,13 @@ def plot_eval_result(observed_df, test_df, predicted_cases, col, window_size, ah
         plt.plot(test_df.index, test_df[col], label='True Cases')        
         plt.plot(test_df.index[(window_size + 1):len(test_df) + 1 - ahead], predicted_cases, label='Predicted Cases')        
         plt.legend()
-        plt.savefig(os.path.join('runs', f'{col}_observation+prediction.png'))  
+        plt.savefig(f'{col}_observation+prediction.png')
     
     else:
         plt.plot(test_df.index, test_df[col], label='True Cases')        
         plt.plot(test_df.index[(window_size + 1):len(test_df) + 1 - ahead], predicted_cases, label='Predicted Cases')        
         plt.legend()
-        plt.savefig(os.path.join('runs', f'{col}_prediction.png'))  
+        plt.savefig(f'{col}_prediction.png')
 
 
 def plot_inference_result(observed_df, col, future, predicted_cases):
@@ -50,5 +50,5 @@ def plot_inference_result(observed_df, col, future, predicted_cases):
     plt.plot(future, predicted_cases, label='Predicted Cases')
     plt.plot()
     plt.legend()
-    plt.savefig(os.path.join('runs', f'{col}_prediction.png'))
+    plt.savefig(f'{col}_prediction.png')
 

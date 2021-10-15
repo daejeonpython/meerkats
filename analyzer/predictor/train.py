@@ -29,13 +29,13 @@ def train(opt):
         'lr': 1e-3,
         'e_features': df.shape[-1],
         'd_features': df.shape[-1],
-        'd_hidn': 256,
-        'n_head': 4,
+        'd_hidn': 512,
+        'n_head': 8,
         'd_head': 32,
         'dropout': 0.2,
-        'd_ff': 128,
+        'd_ff': 256,
         'n_layer': 3,
-        'dense_h': 128,
+        'dense_h': 256,
         'epochs': epochs,
         'device': device
     })
