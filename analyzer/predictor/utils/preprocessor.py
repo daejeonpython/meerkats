@@ -64,10 +64,10 @@ def verify(file_in, target_disease, time_range):
     df = df[df.index > time_range]
 
     for col in df.columns:
-        plot(title=f'{target_disease}_{col}', xlabel='timestamp', ylabel='number of outbreaks', x=df.index, y=df[col], save_path=os.path.join('data', f'{target_disease}_{col}.png'))
+        plot(title=f'{target_disease}_{col}', xlabel='timestamp', ylabel='number of outbreaks', x=df.index, y=df[col], save_path=f'{target_disease}_{col}.png')
 
-    plot(title=f'{target_disease}_altogether', xlabel='timestamp', ylabel='number of outbreaks', x=df.index, y=df[:], save_path=os.path.join('data', f'{target_disease}_altogether.png'))            
-    plot(title=f'{target_disease}_sum', xlabel='timestamp', ylabel='number of outbreaks', x=df.index, y=df[:].sum(axis=1), save_path=os.path.join('data', f'{target_disease}_sum.png'))         
+    plot(title=f'{target_disease}_altogether', xlabel='timestamp', ylabel='number of outbreaks', x=df.index, y=df[:], save_path=f'{target_disease}_altogether.png')
+    plot(title=f'{target_disease}_sum', xlabel='timestamp', ylabel='number of outbreaks', x=df.index, y=df[:].sum(axis=1), save_path=f'{target_disease}_sum.png')
 
 
 def build_trainval(file_in, train_dir, val_dir, time_range, split_ratio):
