@@ -9,8 +9,8 @@
 #### I. 주요 기능
 
 1. 수집된 DB 데이터를 전처리하여 추후 Kibana 대시보드에 전시할 수 있도록 Elasticsearch 인덱스에 삽입
-2. DB에서 CRUD(Create, Read, Update, Delete) 연산을 통해 발생하는 변경사항을 ES 인덱스에 반영함으로써 DB와 Elasticsearch 간의 동기화 유지 (개발 예정)
-3. 전처리된 데이터를 입력으로 하여 향후 질병 발생 양상을 에측 (개발 예정)
+2. DB에서 CRUD(Create, Read, Update, Delete) 연산을 통해 발생하는 변경사항을 ES 인덱스에 반영함으로써 DB와 Elasticsearch 간의 동기화 유지
+3. 전처리된 데이터를 입력으로 하여 향후 질병 발생 양상을 예측
 
 &nbsp;
 
@@ -22,7 +22,7 @@
    분석기는 크게 3가지 프로세스, 즉 '읽기', '예측', '쓰기'로 구성됨
       1. 읽기
          - DB의 모든 row를 읽어들여 쓰기 및 예측에 적합한 형태로 데이터 전처리
-      2. 예측 (개발 예정)
+      2. 예측
          - 전처리된 데이터를 입력으로 하여 현재 시점 t를 기준으로 t+1 내지 t+n까지의 질병 발생 양상 예측
       3. 쓰기
          1. Elasticsearch 인덱스
@@ -30,7 +30,7 @@
             - DB의 row id와 ES의 document id를 1:1 매핑
             - bulk indexing을 통해 인덱스 일괄 업데이트
          2. csv 파일
-            - 데이터 공유를 목적으로 DB 데이터를 csv 파일로 출력
+            - 데이터 공유를 목적으로 DB 데이터를 csv 파일로 출력 (https://github.com/daejeonpython/disease-data)
 
 
 
