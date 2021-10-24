@@ -26,7 +26,7 @@ def preprocess(file_in, file_out, target_disease, spatial_resolution, target_loc
     # 3. Make new dafaframe with respect to the spatial resolution
     # ex) continents (Asia, Europe, America, Africa, Oceania) or countries (Korea, Japan, China, Russia)    
     target_location = target_location.split(',')    
-    df = pd.DataFrame(index=time_series, columns=target_location)  # make new dataframe with columns of unique values            
+    df = pd.DataFrame(index=time_series, columns=target_location)  # make new dataframe with columns of target locations          
     df.index.name = 'timestamp'
 
     for time_point in time_series:   

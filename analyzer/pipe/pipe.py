@@ -175,6 +175,7 @@ def write_csv(opt, rows, column_names):
     print('csv file is generated.')
 
 
+# read data from mysql, then insert them into elasticsearch & csv file
 def pipe(opt):
     rows, column_names = read_mysql(opt)
     write_csv(opt, rows, column_names)

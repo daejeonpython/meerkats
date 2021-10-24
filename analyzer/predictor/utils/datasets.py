@@ -71,7 +71,7 @@ def create_sequences(data, window_size, ahead):
         ys.append(y)
     
     # torch.stack(xs).shape = ((data_len - window_size - 1), window_size, n_features)  ex) (1341, 10, 4)
-    # torch.stack(ys).shape = ((data_len - window_size - 1), ahead, n_features)  ex) (1341, 1, 4)    
+    # torch.stack(ys).shape = ((data_len - window_size - 1), ahead, n_features)  ex) (1341, 2, 4)    
     return torch.stack(xs), torch.stack(ys)
 
 

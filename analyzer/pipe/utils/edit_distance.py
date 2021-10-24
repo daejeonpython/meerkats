@@ -2,6 +2,8 @@ import math
 import Levenshtein
 from .en2kr_dict import disease_dict, species_dict
 
+# Use minimum edit distance (Levenshtein distance) to map different strings (e.g., African Swine Fever, africa swine fever, etc.)
+# into one predefined term (african swine fever)
 def disease_convert(word):
     closest_word = ("", math.inf)
     for key in disease_dict:

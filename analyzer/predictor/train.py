@@ -21,6 +21,8 @@ def train(opt):
     df, train_loader, scaler = create_dataloader(opt.train_data, is_train=True, scaler=None, batch_size=opt.batch_size, window_size=window_size, ahead=ahead)
     _, val_loader = create_dataloader(opt.validation_data, is_train=False, scaler=scaler, batch_size=opt.batch_size, window_size=window_size, ahead=ahead)
 
+
+    # define transformer model hyperparameters
     model_args = easydict.EasyDict({
         'output_size': df.shape[-1],
         'window_size': window_size,
@@ -133,9 +135,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, help='number of epochs')
     parser.add_argument('--batch_size', type=int, help='batch size')    
     parser.add_argument('--window_size', type=int, default=10, help='sequence length to make a prediction')    
-    parser.add_argument('--ahead', type=int, default=1, help='prediction distance')    
-    # parser.add_argument('--project', type=str, default='runs/train', help='save to project/name')
-    # parser.add_argument('--save_period', type=int, default=10, help="log model after every 'save_period' epochs")
+    parser.add_argument('--ahead', type=int, default=1, help='prediction distance')      
     opt = parser.parse_args()
 
     train(opt)
