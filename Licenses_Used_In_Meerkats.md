@@ -15,7 +15,7 @@
 |scipy             |1.6.3    |BSD License                                       |https://github.com/scipy/scipy              |
 |scikit-learn      |0.24.2   |new BSD                                           |https://github.com/scikit-learn/scikit-learn|
 |torch             |1.7.0    |BSD License                                       |https://github.com/pytorch/pytorch          |
-|SQLAlchemy        |1.4.26   |MIT License                                       |https://github.com/sqlalchemy               |
+|SQLAlchemy        |1.4.26   |MIT License                                       |https://github.com/sqlalchemy/sqlalchemy    |
 |certifi           |2021.10.8|Mozilla Public License 2.0 (MPL 2.0)              |https://github.com/certifi/python-certifi   |
 |charset-normalizer|2.0.7    |MIT License                                       |https://github.com/Ousret/charset_normalizer|
 |greenlet          |1.1.2    |MIT License                                       |https://github.com/python-greenlet/greenlet |
