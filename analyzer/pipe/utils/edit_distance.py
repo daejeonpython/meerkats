@@ -1,5 +1,5 @@
 import math
-import Levenshtein
+import pylev
 from .en2kr_dict import disease_dict, species_dict
 
 # Use minimum edit distance (Levenshtein distance) to map different strings (e.g., African Swine Fever, africa swine fever, etc.)
@@ -7,7 +7,7 @@ from .en2kr_dict import disease_dict, species_dict
 def disease_convert(word):
     closest_word = ("", math.inf)
     for key in disease_dict:
-        levenshtein_distance = Levenshtein.distance(word, key)
+        levenshtein_distance = pylev.levenshtein(word, key)
         if levenshtein_distance < closest_word[1]:
             closest_word = (key, levenshtein_distance)
 
@@ -16,7 +16,7 @@ def disease_convert(word):
 def species_convert(word):
     closest_word = ("", math.inf)
     for key in species_dict:
-        levenshtein_distance = Levenshtein.distance(word, key)
+        levenshtein_distance = pylev.levenshtein(word, key)
         if levenshtein_distance < closest_word[1]:
             closest_word = (key, levenshtein_distance)
 
