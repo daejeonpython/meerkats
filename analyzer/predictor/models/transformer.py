@@ -1,3 +1,6 @@
+# Copied & modified from https://www.dacon.io/competitions/official/235757/codeshare/3244?page=1&dtype=recent
+
+
 import numpy as np
 import torch
 import torch.nn as nn
